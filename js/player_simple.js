@@ -13,6 +13,7 @@ class SimpleStreamPlayer {
         
         this.streamUrl = `${CONFIG.BACKEND_URL}${CONFIG.STREAM_ENDPOINT}`;
         this.isStreaming = false;
+        this.streamCheckInterval = null;
         
         this.init();
     }
@@ -43,8 +44,8 @@ class SimpleStreamPlayer {
                 mode: 'cors',
                 cache: 'no-cache',
                 headers: {
-                'ngrok-skip-browser-warning': 'true'  // This fixes ngrok issue
-            }
+                    'ngrok-skip-browser-warning': 'true'
+                }
             });
             
             if (response.ok) {
@@ -79,10 +80,50 @@ class SimpleStreamPlayer {
         this.updateStatus('Connecting...', false);
         this.streamStatus.textContent = 'Loading...';
         this.showStopButton();
+        
+        // Check if stream is working after 2 seconds
+        setTimeout(() => {
+            if (this.isStreaming && this.streamImg.naturalWidth > 0) {
+                console.log('Stream connected! Image dimensions:', 
+                    this.streamImg.naturalWidth, 'x', this.streamImg.naturalHeight);
+                this.onStreamLoad();
+            } else if (this.isStreaming) {
+                console.log('Waiting for stream...');
+                // Give it more time for slower connections
+                setTimeout(() => {
+                    if (this.isStreaming && this.streamImg.naturalWidth > 0) {
+                        this.onStreamLoad();
+                    }
+                }, 3000);
+            }
+        }, 2000);
+        
+        // Monitor stream health
+        this.startStreamMonitoring();
+    }
+    
+    startStreamMonitoring() {
+        // Check stream every 5 seconds
+        this.streamCheckInterval = setInterval(() => {
+            if (this.isStreaming && this.streamImg.naturalWidth > 0) {
+                // Stream is still alive
+                if (!this.statusElement.classList.contains('online')) {
+                    this.onStreamLoad();
+                }
+            } else if (this.isStreaming) {
+                console.warn('Stream appears to have stopped');
+            }
+        }, 5000);
     }
     
     stopStream() {
         console.log('Stopping stream');
+        
+        // Clear monitoring
+        if (this.streamCheckInterval) {
+            clearInterval(this.streamCheckInterval);
+            this.streamCheckInterval = null;
+        }
         
         // Clear img src to stop stream
         this.streamImg.src = '';
@@ -95,7 +136,7 @@ class SimpleStreamPlayer {
     }
     
     onStreamLoad() {
-        console.log('Stream loaded successfully!');
+        console.log('Stream is LIVE!');
         this.updateStatus('🔴 Live', true);
         this.streamStatus.textContent = 'Live';
     }
@@ -104,15 +145,15 @@ class SimpleStreamPlayer {
         console.error('Stream error');
         
         if (this.isStreaming) {
-            this.updateStatus('Stream error - Check backend', false);
+            this.updateStatus('Stream error - Retrying...', false);
             this.streamStatus.textContent = 'Error';
-            this.streamImg.style.display = 'none';
             
             // Auto-retry after 3 seconds
             setTimeout(() => {
                 if (this.isStreaming) {
                     console.log('Retrying stream...');
-                    this.startStream();
+                    const timestamp = new Date().getTime();
+                    this.streamImg.src = `${this.streamUrl}?t=${timestamp}`;
                 }
             }, 3000);
         }
