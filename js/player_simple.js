@@ -41,7 +41,10 @@ class SimpleStreamPlayer {
             
             const response = await fetch(healthUrl, {
                 mode: 'cors',
-                cache: 'no-cache'
+                cache: 'no-cache',
+                headers: {
+                'ngrok-skip-browser-warning': 'true'  // This fixes ngrok issue
+            }
             });
             
             if (response.ok) {
