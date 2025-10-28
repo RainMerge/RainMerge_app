@@ -4,22 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RainMerge Live Stream</title>
+    
+    <!-- Video.js CSS -->
+    <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet" />
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🌊 RainMerge Application_wow</h1>
+            <h1>🌊 RainMerge Application</h1>
             <p class="subtitle">Live stream from local backend</p>
         </header>
 
         <div class="stream-container">
             <div id="status" class="status offline">
                 <span class="status-dot"></span>
-                <span id="status-text">Connecting...</span>
+                <span id="status-text">Checking backend...</span>
             </div>
             
-            <video id="stream" controls autoplay playsinline></video>
+            <!-- Video.js Player -->
+            <video 
+                id="stream" 
+                class="video-js vjs-default-skin vjs-big-play-centered"
+                controls
+                preload="auto"
+                width="100%"
+                height="auto"
+                data-setup='{"liveui": true}'>
+                <source id="video-source" type="video/mp4">
+                Your browser doesn't support HTML5 video.
+            </video>
             
             <div class="stream-info">
                 <div class="info-item">
@@ -31,23 +45,26 @@
                     <span id="latency">~3s</span>
                 </div>
                 <div class="info-item">
-                    <span class="label">Viewers:</span>
-                    <span id="viewers">1</span>
+                    <span class="label">Format:</span>
+                    <span id="format">MP4</span>
                 </div>
             </div>
         </div>
 
         <div class="controls">
-            <button id="reconnect-btn" class="btn">🔄 Reconnect</button>
+            <button id="start-btn" class="btn">▶ Start Stream</button>
+            <button id="stop-btn" class="btn" style="display:none;">⏹ Stop Stream</button>
             <button id="fullscreen-btn" class="btn">⛶ Fullscreen</button>
         </div>
 
         <footer>
-            <p>Powered by local backend</p>
+            <p>Powered by local backend • Using Video.js player</p>
         </footer>
     </div>
 
+    <!-- Video.js Library -->
+    <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
     <script src="js/config.js"></script>
-    <script src="js/player.js"></script>
+    <script src="js/player-videojs.js"></script>
 </body>
 </html>
