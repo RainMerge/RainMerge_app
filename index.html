@@ -1,1 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RainMerge Live Stream</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌊 RainMerge Application</h1>
+            <p class="subtitle">Live stream from local backend</p>
+        </header>
 
+        <div class="stream-container">
+            <div id="status" class="status offline">
+                <span class="status-dot"></span>
+                <span id="status-text">Connecting...</span>
+            </div>
+            
+            <video id="stream" controls autoplay playsinline></video>
+            
+            <div class="stream-info">
+                <div class="info-item">
+                    <span class="label">Quality:</span>
+                    <span id="quality">HD</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Latency:</span>
+                    <span id="latency">~3s</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Viewers:</span>
+                    <span id="viewers">1</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="reconnect-btn" class="btn">🔄 Reconnect</button>
+            <button id="fullscreen-btn" class="btn">⛶ Fullscreen</button>
+        </div>
+
+        <footer>
+            <p>Powered by local backend</p>
+        </footer>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/player.js"></script>
+</body>
+</html>
