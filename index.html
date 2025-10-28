@@ -4,9 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RainMerge Live Stream</title>
-    
-    <!-- Video.js CSS -->
-    <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet" />
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -22,18 +19,13 @@
                 <span id="status-text">Checking backend...</span>
             </div>
             
-            <!-- Video.js Player -->
-            <video 
-                id="stream" 
-                class="video-js vjs-default-skin vjs-big-play-centered"
-                controls
-                preload="auto"
-                width="100%"
-                height="auto"
-                data-setup='{"liveui": true}'>
-                <source id="video-source" type="video/mp4">
-                Your browser doesn't support HTML5 video.
-            </video>
+            <!-- Simple IMG tag - works perfectly with MJPEG! -->
+            <div class="video-wrapper">
+                <img id="stream" 
+                     src="" 
+                     alt="RainMerge Stream"
+                     style="display:none; width: 100%; border-radius: 10px; background: #000;">
+            </div>
             
             <div class="stream-info">
                 <div class="info-item">
@@ -41,12 +33,12 @@
                     <span id="quality">HD</span>
                 </div>
                 <div class="info-item">
-                    <span class="label">Latency:</span>
-                    <span id="latency">~3s</span>
+                    <span class="label">Format:</span>
+                    <span id="format">MJPEG</span>
                 </div>
                 <div class="info-item">
-                    <span class="label">Format:</span>
-                    <span id="format">MP4</span>
+                    <span class="label">Status:</span>
+                    <span id="stream-status">Offline</span>
                 </div>
             </div>
         </div>
@@ -58,13 +50,11 @@
         </div>
 
         <footer>
-            <p>Powered by local backend • Using Video.js player</p>
+            <p>Powered by local backend • MJPEG streaming (universal support)</p>
         </footer>
     </div>
 
-    <!-- Video.js Library -->
-    <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
     <script src="js/config.js"></script>
-    <script src="js/player-videojs.js"></script>
+    <script src="js/player-simple.js"></script>
 </body>
 </html>
