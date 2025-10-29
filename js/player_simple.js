@@ -103,58 +103,57 @@ class SimpleStreamPlayer {
     
     // 🎯 NEW: Handle clicks on the stream
     async handleStreamClick(event) {
-        if (!this.isStreaming) {
-            console.log('⚠️ Stream not active, click ignored');
-            return;
-        }
-        
-        const rect = this.streamImg.getBoundingClientRect();
-        const img = this.streamImg;
-        
-        // Calculate click position relative to the image
-        const clickX = event.clientX - rect.left;
-        const clickY = event.clientY - rect.top;
-        
-        // Get natural (original) dimensions
-        const naturalWidth = img.naturalWidth || 1000;
-        const naturalHeight = img.naturalHeight || 700;
-        
-        // Scale coordinates to match actual window size
-        const windowX = Math.floor((clickX / rect.width) * naturalWidth);
-        const windowY = Math.floor((clickY / rect.height) * naturalHeight);
-        
-        console.log(`🖱️ Click at display(${Math.floor(clickX)}, ${Math.floor(clickY)}) → window(${windowX}, ${windowY})`);
-        
-        // Show visual feedback
-        this.showClickIndicator(event.clientX, event.clientY);
-        
-        // Send click to backend
-        try {
-            const response = await fetch(`${CONFIG.BACKEND_URL}/control/click`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'ngrok-skip-browser-warning': 'true'
-                },
-                body: JSON.stringify({
-                    x: windowX,
-                    y: windowY
-                })
-            });
-            
-            const result = await response.json();
-            console.log('Click response:', result);
-            
-            if (result.status === 'success') {
-                console.log('✅ Click registered successfully!');
-            } else {
-                console.error('❌ Click failed:', result.message);
-            }
-        } catch (error) {
-            console.error('❌ Error sending click:', error);
-        }
+    if (!this.isStreaming) {
+        console.log('⚠️ Stream not active, click ignored');
+        return;
     }
     
+    const rect = this.streamImg.getBoundingClientRect();
+    
+    // Calculate click position relative to the image
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
+    
+    // Convert to percentage (0.0 to 1.0) - this is resolution-independent!
+    const percentX = clickX / rect.width;
+    const percentY = clickY / rect.height;
+    
+    // Scale to 1280x720 (what the server expects)
+    const streamX = Math.floor(percentX * 1280);
+    const streamY = Math.floor(percentY * 720);
+    
+    console.log(`🖱️ Click at display(${Math.floor(clickX)}, ${Math.floor(clickY)}) → stream(${streamX}, ${streamY}) [${(percentX*100).toFixed(1)}%, ${(percentY*100).toFixed(1)}%]`);
+    
+    // Show visual feedback
+    this.showClickIndicator(event.clientX, event.clientY);
+    
+    // Send click to backend
+    try {
+        const response = await fetch(`${CONFIG.BACKEND_URL}/control/click`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true'
+            },
+            body: JSON.stringify({
+                x: streamX,
+                y: streamY
+            })
+        });
+        
+        const result = await response.json();
+        console.log('Click response:', result);
+        
+        if (result.status === 'success') {
+            console.log('✅ Click registered at screen:', result.screen_coords);
+        } else {
+            console.error('❌ Click failed:', result.message);
+        }
+    } catch (error) {
+        console.error('❌ Error sending click:', error);
+    }
+}
+
     // 🎯 NEW: Visual feedback for clicks
     showClickIndicator(x, y) {
         const indicator = document.createElement('div');
