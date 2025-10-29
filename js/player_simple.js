@@ -1,6 +1,3 @@
-// Simple MJPEG Stream Player
-// Works with <img> tag - most reliable method!
-
 class SimpleStreamPlayer {
     constructor() {
         this.streamImg = document.getElementById('stream');
@@ -13,7 +10,6 @@ class SimpleStreamPlayer {
         
         this.streamUrl = `${CONFIG.BACKEND_URL}${CONFIG.STREAM_ENDPOINT}`;
         this.isStreaming = false;
-        this.streamCheckInterval = null;
         
         this.init();
     }
@@ -22,16 +18,13 @@ class SimpleStreamPlayer {
         console.log('=== RainMerge Simple Stream Player ===');
         console.log('Stream URL:', this.streamUrl);
         
-        // Button listeners
         this.startBtn.addEventListener('click', () => this.startStream());
         this.stopBtn.addEventListener('click', () => this.stopStream());
         this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
         
-        // Image listeners
-        this.streamImg.addEventListener('load', () => this.onStreamLoad());
-        this.streamImg.addEventListener('error', () => this.onStreamError());
+        // 🎯 ADD CLICK HANDLER FOR INTERACTIVE CONTROL
+        this.streamImg.addEventListener('click', (e) => this.handleStreamClick(e));
         
-        // Check backend
         this.checkHealth();
     }
     
@@ -51,81 +44,54 @@ class SimpleStreamPlayer {
             if (response.ok) {
                 const data = await response.json();
                 console.log('Backend ready:', data);
-                this.updateStatus('Backend ready - Click Start to stream', false);
+                this.updateStatus('✅ Backend ready - Click Start', false);
             } else {
-                this.updateStatus('Backend offline', false);
+                this.updateStatus('❌ Backend offline', false);
             }
         } catch (error) {
             console.error('Health check failed:', error);
-            this.updateStatus('Cannot reach backend', false);
+            this.updateStatus('❌ Cannot reach backend', false);
         }
     }
     
     startStream() {
         if (this.isStreaming) return;
         
-        console.log('Starting MJPEG stream...');
+        console.log('🎥 Starting stream...');
         this.isStreaming = true;
         
-        // Add timestamp to prevent caching
-        const timestamp = new Date().getTime();
-        const streamUrlWithTimestamp = `${this.streamUrl}?t=${timestamp}`;
-        
-        console.log('Loading stream from:', streamUrlWithTimestamp);
-        
-        // Simply set img src to stream URL!
-        this.streamImg.src = streamUrlWithTimestamp;
+        this.streamImg.src = this.streamUrl;
         this.streamImg.style.display = 'block';
+        this.streamImg.style.cursor = 'crosshair';  // Show it's clickable
         
-        this.updateStatus('Connecting...', false);
-        this.streamStatus.textContent = 'Loading...';
+        this.updateStatus('🔄 Connecting...', false);
+        this.streamStatus.textContent = 'Connecting...';
         this.showStopButton();
         
-        // Check if stream is working after 2 seconds
+        // Check if loaded after 3 seconds
         setTimeout(() => {
-            if (this.isStreaming && this.streamImg.naturalWidth > 0) {
-                console.log('Stream connected! Image dimensions:', 
-                    this.streamImg.naturalWidth, 'x', this.streamImg.naturalHeight);
-                this.onStreamLoad();
-            } else if (this.isStreaming) {
-                console.log('Waiting for stream...');
-                // Give it more time for slower connections
-                setTimeout(() => {
-                    if (this.isStreaming && this.streamImg.naturalWidth > 0) {
-                        this.onStreamLoad();
-                    }
-                }, 3000);
-            }
-        }, 2000);
-        
-        // Monitor stream health
-        this.startStreamMonitoring();
-    }
-    
-    startStreamMonitoring() {
-        // Check stream every 5 seconds
-        this.streamCheckInterval = setInterval(() => {
-            if (this.isStreaming && this.streamImg.naturalWidth > 0) {
-                // Stream is still alive
-                if (!this.statusElement.classList.contains('online')) {
-                    this.onStreamLoad();
+            if (this.isStreaming) {
+                const width = this.streamImg.naturalWidth || this.streamImg.width;
+                const height = this.streamImg.naturalHeight || this.streamImg.height;
+                
+                console.log('Stream dimensions:', width, 'x', height);
+                
+                if (width > 0 && height > 0) {
+                    console.log('✅ Stream is LIVE!');
+                    this.updateStatus('🔴 Live - Click to control!', true);
+                    this.streamStatus.textContent = 'Live';
+                } else {
+                    console.log('⚠️ Stream not loading properly');
+                    this.updateStatus('⚠️ Stream loading issue', false);
+                    this.streamStatus.textContent = 'Issue';
                 }
-            } else if (this.isStreaming) {
-                console.warn('Stream appears to have stopped');
             }
-        }, 5000);
+        }, 3000);
     }
     
     stopStream() {
-        console.log('Stopping stream');
+        console.log('⏹️ Stopping stream');
         
-        // Clear monitoring
-        if (this.streamCheckInterval) {
-            clearInterval(this.streamCheckInterval);
-            this.streamCheckInterval = null;
-        }
-        
-        // Clear img src to stop stream
         this.streamImg.src = '';
         this.streamImg.style.display = 'none';
         
@@ -135,28 +101,78 @@ class SimpleStreamPlayer {
         this.showStartButton();
     }
     
-    onStreamLoad() {
-        console.log('Stream is LIVE!');
-        this.updateStatus('🔴 Live', true);
-        this.streamStatus.textContent = 'Live';
+    // 🎯 NEW: Handle clicks on the stream
+    async handleStreamClick(event) {
+        if (!this.isStreaming) {
+            console.log('⚠️ Stream not active, click ignored');
+            return;
+        }
+        
+        const rect = this.streamImg.getBoundingClientRect();
+        const img = this.streamImg;
+        
+        // Calculate click position relative to the image
+        const clickX = event.clientX - rect.left;
+        const clickY = event.clientY - rect.top;
+        
+        // Get natural (original) dimensions
+        const naturalWidth = img.naturalWidth || 1000;
+        const naturalHeight = img.naturalHeight || 700;
+        
+        // Scale coordinates to match actual window size
+        const windowX = Math.floor((clickX / rect.width) * naturalWidth);
+        const windowY = Math.floor((clickY / rect.height) * naturalHeight);
+        
+        console.log(`🖱️ Click at display(${Math.floor(clickX)}, ${Math.floor(clickY)}) → window(${windowX}, ${windowY})`);
+        
+        // Show visual feedback
+        this.showClickIndicator(event.clientX, event.clientY);
+        
+        // Send click to backend
+        try {
+            const response = await fetch(`${CONFIG.BACKEND_URL}/control/click`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true'
+                },
+                body: JSON.stringify({
+                    x: windowX,
+                    y: windowY
+                })
+            });
+            
+            const result = await response.json();
+            console.log('Click response:', result);
+            
+            if (result.status === 'success') {
+                console.log('✅ Click registered successfully!');
+            } else {
+                console.error('❌ Click failed:', result.message);
+            }
+        } catch (error) {
+            console.error('❌ Error sending click:', error);
+        }
     }
     
-    onStreamError() {
-        console.error('Stream error');
+    // 🎯 NEW: Visual feedback for clicks
+    showClickIndicator(x, y) {
+        const indicator = document.createElement('div');
+        indicator.style.position = 'fixed';
+        indicator.style.left = x + 'px';
+        indicator.style.top = y + 'px';
+        indicator.style.width = '30px';
+        indicator.style.height = '30px';
+        indicator.style.border = '3px solid red';
+        indicator.style.borderRadius = '50%';
+        indicator.style.pointerEvents = 'none';
+        indicator.style.transform = 'translate(-50%, -50%)';
+        indicator.style.zIndex = '10000';
+        indicator.style.animation = 'clickPulse 0.5s ease-out';
         
-        if (this.isStreaming) {
-            this.updateStatus('Stream error - Retrying...', false);
-            this.streamStatus.textContent = 'Error';
-            
-            // Auto-retry after 3 seconds
-            setTimeout(() => {
-                if (this.isStreaming) {
-                    console.log('Retrying stream...');
-                    const timestamp = new Date().getTime();
-                    this.streamImg.src = `${this.streamUrl}?t=${timestamp}`;
-                }
-            }, 3000);
-        }
+        document.body.appendChild(indicator);
+        
+        setTimeout(() => indicator.remove(), 500);
     }
     
     showStartButton() {
@@ -185,7 +201,6 @@ class SimpleStreamPlayer {
     }
 }
 
-// Initialize when page loads
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Backend URL:', CONFIG.BACKEND_URL);
     new SimpleStreamPlayer();
