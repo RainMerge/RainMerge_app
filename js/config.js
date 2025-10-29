@@ -1,6 +1,6 @@
 
 const CONFIG = {
-    BACKEND_URL: 'https://mirier-lamonica-vapidly.ngrok-free.dev',  // CHANGE THIS TO YOUR NGROK URL
+    BACKEND_URL: 'https://slow-correctly-cloudy-guild.trycloudflare.com',  // CHANGE THIS TO YOUR NGROK URL
     STREAM_ENDPOINT: '/stream',
     HEALTH_ENDPOINT: '/health',
     RECONNECT_DELAY: 3000,
