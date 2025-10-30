@@ -1,299 +1,139 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Climate Analysis Tool</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Climate Analysis Tool</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: radial-gradient(ellipse at bottom, #0b132b 0%, #000000 100%);
+        min-height: 100vh;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+    }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-            position: relative;
-        }
-
-        /* Animated Globe Background */
-        .globe-container {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            pointer-events: none;
-        }
-
-        .globe {
-            width: 600px;
-            height: 600px;
-            position: relative;
-            animation: rotateGlobe 30s linear infinite, growGlobe 3s ease-out forwards;
-            opacity: 0.15;
-            transform: scale(0.1); /* Start tiny */
-        }
-
-        /* Globe sphere */
-        .globe-sphere {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3), transparent);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            position: relative;
-            box-shadow: 
-                inset 0 0 100px rgba(255, 255, 255, 0.1),
-                0 0 100px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Latitude lines */
-        .latitude {
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100%;
-            height: 2px;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-        }
-
-        .lat-1 { top: 10%; width: 90%; }
-        .lat-2 { top: 25%; width: 95%; }
-        .lat-3 { top: 40%; width: 98%; }
-        .lat-4 { top: 50%; width: 100%; }
-        .lat-5 { top: 60%; width: 98%; }
-        .lat-6 { top: 75%; width: 95%; }
-        .lat-7 { top: 90%; width: 90%; }
-
-        /* Longitude lines */
-        .longitude {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 2px;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        .lon-1 { transform: translate(-50%, -50%) rotate(0deg); }
-        .lon-2 { transform: translate(-50%, -50%) rotate(30deg); }
-        .lon-3 { transform: translate(-50%, -50%) rotate(60deg); }
-        .lon-4 { transform: translate(-50%, -50%) rotate(90deg); }
-        .lon-5 { transform: translate(-50%, -50%) rotate(120deg); }
-        .lon-6 { transform: translate(-50%, -50%) rotate(150deg); }
-
-        /* Growing animation */
-        @keyframes growGlobe {
-            0% {
-                transform: scale(0.1);
-                opacity: 0;
-            }
-            50% {
-                opacity: 0.15;
-            }
-            100% {
-                transform: scale(1);
-                opacity: 0.15;
-            }
-        }
-
-        @keyframes rotateGlobe {
-            from {
-                transform: rotate(0deg);
-            }
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* Content on top */
-        .content {
-            position: relative;
-            z-index: 10;
-            text-align: center;
-            padding: 40px;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 500px;
-            backdrop-filter: blur(10px);
-            animation: fadeIn 0.5s ease-out 2.5s both;
-            opacity: 0;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .icon {
-            font-size: 80px;
-            margin-bottom: 20px;
-            animation: float 3s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-
-        h1 {
-            font-size: 2.2em;
-            color: #2c3e50;
-            margin-bottom: 10px;
-            font-weight: 600;
-        }
-
-        .subtitle {
-            color: #7f8c8d;
-            margin-bottom: 30px;
-            font-size: 1.1em;
-        }
-
-        .status {
-            color: #667eea;
-            font-size: 0.9em;
-            margin-bottom: 20px;
-            font-weight: 500;
-            min-height: 24px;
-        }
-
-        .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 18px 60px;
-            font-size: 1.1em;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-decoration: none;
-            display: inline-block;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
-            font-weight: 500;
-            opacity: 0.5;
-            pointer-events: none;
-        }
-
-        .btn.ready {
-            opacity: 1;
-            pointer-events: auto;
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% {
-                box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
-            }
-            50% {
-                box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
-            }
-        }
-
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.5);
-        }
-
-        .btn:active {
-            transform: translateY(-1px);
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .globe {
-                width: 400px;
-                height: 400px;
-            }
-            
-            .content {
-                margin: 20px;
-                padding: 30px;
-            }
-            
-            h1 {
-                font-size: 1.8em;
-            }
-        }
-    </style>
+    /* Button Styling */
+    .btn-container {
+        position: absolute;
+        bottom: 80px;
+        text-align: center;
+        opacity: 0;
+        transform: translateY(40px);
+        animation: fadeInBtn 1s ease-out 4.5s forwards;
+        z-index: 10;
+    }
+    @keyframes fadeInBtn {
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn {
+        background: linear-gradient(135deg, #007cf0 0%, #00dfd8 100%);
+        color: white;
+        border: none;
+        padding: 16px 60px;
+        font-size: 1.2em;
+        border-radius: 40px;
+        cursor: pointer;
+        box-shadow: 0 10px 40px rgba(0, 223, 216, 0.5);
+        font-weight: 600;
+        transition: all 0.4s ease;
+        position: relative;
+        overflow: hidden;
+        text-decoration: none;
+    }
+    .btn:hover { transform: translateY(-5px); }
+</style>
 </head>
 <body>
-    <!-- Animated Globe Background -->
-    <div class="globe-container">
-        <div class="globe">
-            <div class="globe-sphere">
-                <!-- Latitude lines -->
-                <div class="latitude lat-1"></div>
-                <div class="latitude lat-2"></div>
-                <div class="latitude lat-3"></div>
-                <div class="latitude lat-4"></div>
-                <div class="latitude lat-5"></div>
-                <div class="latitude lat-6"></div>
-                <div class="latitude lat-7"></div>
-                
-                <!-- Longitude lines -->
-                <div class="longitude lon-1"></div>
-                <div class="longitude lon-2"></div>
-                <div class="longitude lon-3"></div>
-                <div class="longitude lon-4"></div>
-                <div class="longitude lon-5"></div>
-                <div class="longitude lon-6"></div>
-            </div>
-        </div>
+    <canvas id="earthCanvas"></canvas>
+    <div class="btn-container">
+        <a href="https://YOUR_CLOUDFLARE_URL_HERE/guacamole" class="btn" target="_blank">Launch Tool</a>
     </div>
 
-    <!-- Content -->
-    <div class="content">
-        <div class="icon">🌍</div>
-        <h1>Climate Analysis Tool</h1>
-        <p class="subtitle">Browser-based data analysis</p>
-        <p class="status" id="status">Initializing...</p>
-        
-        <a href="YOUR_CLOUDFLARE_URL_HERE/guacamole" 
-           class="btn" 
-           id="launchBtn"
-           target="_blank">
-            Launch Application
-        </a>
-    </div>
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.164/build/three.module.js";
+import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.164/examples/jsm/controls/OrbitControls.js";
 
-    <script>
-        // Simulate setup process
-        const statusText = document.getElementById('status');
-        const launchBtn = document.getElementById('launchBtn');
-        
-        const messages = [
-            { text: 'Initializing...', delay: 0 },
-            { text: 'Loading environment...', delay: 1000 },
-            { text: 'Connecting to server...', delay: 2000 },
-            { text: 'Ready!', delay: 3000 }
-        ];
-        
-        messages.forEach(msg => {
-            setTimeout(() => {
-                statusText.textContent = msg.text;
-                if (msg.text === 'Ready!') {
-                    launchBtn.classList.add('ready');
-                    statusText.style.color = '#48bb78';
-                }
-            }, msg.delay);
-        });
-    </script>
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.z = 2.5;
+
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("earthCanvas"), antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+
+/* Earth Texture (NASA Blue Marble) */
+const textureLoader = new THREE.TextureLoader();
+const earthTexture = textureLoader.load("https://eoimages.gsfc.nasa.gov/images/imagerecords/74000/74415/world.topo.bathy.200412.3x21600x10800.jpg");
+const earthBump = textureLoader.load("https://raw.githubusercontent.com/fireship-io/threejs-earth/main/earthbump1k.jpg");
+const earthSpec = textureLoader.load("https://raw.githubusercontent.com/fireship-io/threejs-earth/main/earthspec1k.jpg");
+
+const earthGeometry = new THREE.SphereGeometry(1, 64, 64);
+const earthMaterial = new THREE.MeshPhongMaterial({
+    map: earthTexture,
+    bumpMap: earthBump,
+    bumpScale: 0.04,
+    specularMap: earthSpec,
+    specular: new THREE.Color("grey")
+});
+const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
+scene.add(earthMesh);
+
+/* Glow (Atmosphere) */
+const atmosphereGeometry = new THREE.SphereGeometry(1.05, 64, 64);
+const atmosphereMaterial = new THREE.MeshBasicMaterial({
+    color: 0x3399ff,
+    transparent: true,
+    opacity: 0.2,
+});
+const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+scene.add(atmosphere);
+
+/* Lighting */
+const ambientLight = new THREE.AmbientLight(0x333333);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+directionalLight.position.set(5, 3, 5);
+scene.add(ambientLight);
+scene.add(directionalLight);
+
+/* Stars Background */
+const starsGeometry = new THREE.BufferGeometry();
+const starVertices = [];
+for (let i = 0; i < 5000; i++) {
+    const x = (Math.random() - 0.5) * 2000;
+    const y = (Math.random() - 0.5) * 2000;
+    const z = -Math.random() * 2000;
+    starVertices.push(x, y, z);
+}
+starsGeometry.setAttribute("position", new THREE.Float32BufferAttribute(starVertices, 3));
+const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff });
+const stars = new THREE.Points(starsGeometry, starsMaterial);
+scene.add(stars);
+
+/* Controls */
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.enableZoom = false;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.4;
+
+window.addEventListener("resize", () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+/* Animate */
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+}
+animate();
+</script>
 </body>
 </html>
