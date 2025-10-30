@@ -13,41 +13,85 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #f5f7fa;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            flex-direction: column;
-        }
-
-        .container {
-            text-align: center;
-            padding: 40px;
-        }
-
-        /* Spinning Earth Animation */
-        .earth {
-            width: 120px;
-            height: 120px;
-            margin: 0 auto 30px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 50%;
+            overflow: hidden;
             position: relative;
-            animation: rotate 3s linear infinite;
-            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
         }
 
-        .earth::before {
-            content: '🌍';
-            font-size: 80px;
+        /* Animated Globe Background */
+        .globe-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .globe {
+            width: 600px;
+            height: 600px;
+            position: relative;
+            animation: rotateGlobe 30s linear infinite;
+            opacity: 0.15;
+        }
+
+        /* Globe sphere */
+        .globe-sphere {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3), transparent);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            box-shadow: 
+                inset 0 0 100px rgba(255, 255, 255, 0.1),
+                0 0 100px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Latitude lines */
+        .latitude {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+        }
+
+        .lat-1 { top: 10%; width: 90%; }
+        .lat-2 { top: 25%; width: 95%; }
+        .lat-3 { top: 40%; width: 98%; }
+        .lat-4 { top: 50%; width: 100%; }
+        .lat-5 { top: 60%; width: 98%; }
+        .lat-6 { top: 75%; width: 95%; }
+        .lat-7 { top: 90%; width: 90%; }
+
+        /* Longitude lines */
+        .longitude {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+            width: 2px;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.3);
         }
 
-        @keyframes rotate {
+        .lon-1 { transform: translate(-50%, -50%) rotate(0deg); }
+        .lon-2 { transform: translate(-50%, -50%) rotate(30deg); }
+        .lon-3 { transform: translate(-50%, -50%) rotate(60deg); }
+        .lon-4 { transform: translate(-50%, -50%) rotate(90deg); }
+        .lon-5 { transform: translate(-50%, -50%) rotate(120deg); }
+        .lon-6 { transform: translate(-50%, -50%) rotate(150deg); }
+
+        @keyframes rotateGlobe {
             from {
                 transform: rotate(0deg);
             }
@@ -56,73 +100,121 @@
             }
         }
 
+        /* Content on top */
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            backdrop-filter: blur(10px);
+        }
+
+        .icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
         h1 {
-            font-size: 2em;
+            font-size: 2.2em;
             color: #2c3e50;
             margin-bottom: 10px;
+            font-weight: 600;
         }
 
         .subtitle {
             color: #7f8c8d;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
             font-size: 1.1em;
         }
 
         .btn {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 15px 50px;
+            padding: 18px 60px;
             font-size: 1.1em;
             border-radius: 50px;
             cursor: pointer;
             transition: all 0.3s;
             text-decoration: none;
             display: inline-block;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            font-weight: 500;
         }
 
         .btn:hover {
-            background: #5568d3;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.5);
         }
 
-        /* Loading state */
-        .loading {
-            display: none;
-            margin-top: 20px;
-            color: #667eea;
-            font-size: 0.9em;
+        .btn:active {
+            transform: translateY(-1px);
         }
 
-        .loading.active {
-            display: block;
+        /* Responsive */
+        @media (max-width: 768px) {
+            .globe {
+                width: 400px;
+                height: 400px;
+            }
+            
+            .content {
+                margin: 20px;
+                padding: 30px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="earth"></div>
+    <!-- Animated Globe Background -->
+    <div class="globe-container">
+        <div class="globe">
+            <div class="globe-sphere">
+                <!-- Latitude lines -->
+                <div class="latitude lat-1"></div>
+                <div class="latitude lat-2"></div>
+                <div class="latitude lat-3"></div>
+                <div class="latitude lat-4"></div>
+                <div class="latitude lat-5"></div>
+                <div class="latitude lat-6"></div>
+                <div class="latitude lat-7"></div>
+                
+                <!-- Longitude lines -->
+                <div class="longitude lon-1"></div>
+                <div class="longitude lon-2"></div>
+                <div class="longitude lon-3"></div>
+                <div class="longitude lon-4"></div>
+                <div class="longitude lon-5"></div>
+                <div class="longitude lon-6"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <div class="icon">🌍</div>
         <h1>Climate Analysis Tool</h1>
         <p class="subtitle">Browser-based data analysis</p>
         
         <a href="YOUR_CLOUDFLARE_URL_HERE/guacamole" 
            class="btn" 
-           target="_blank"
-           onclick="showLoading()">
+           target="_blank">
             Launch Application
         </a>
-        
-        <div id="loading" class="loading">
-            Opening application...
-        </div>
     </div>
-
-    <script>
-        function showLoading() {
-            document.getElementById('loading').classList.add('active');
-        }
-    </script>
 </body>
 </html>
