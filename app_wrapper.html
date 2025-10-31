@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Viewer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        iframe { 
+            width: 100%; 
+            height: 100%; 
+            border: none; 
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Guacamole embedded here -->
+    <iframe id="appFrame" src="http://localhost:8080/guacamole/#/client/UHlRdDUgQXBwAGMAZGVmYXVsdA" allow="clipboard-read; clipboard-write"></iframe>
+
+    <script>
+        // ===== IDLE TIMER =====
+        const IDLE_TIMEOUT = 30000; // 30 seconds
+        let idleTimer;
+        
+        function resetTimer() {
+            clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => {
+                console.log('30 seconds idle - going to screensaver');
+                sessionStorage.setItem('returnUrl', window.location.href);
+                window.location.href = 'idle_index.html';
+            }, IDLE_TIMEOUT);
+        }
+        
+        // Listen for activity on THIS PAGE
+        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+        events.forEach(event => {
+            document.addEventListener(event, resetTimer, true);
+        });
+        
+        // Also listen for activity inside the iframe (if same origin)
+        window.addEventListener('message', (e) => {
+            if (e.data === 'activity') resetTimer();
+        });
+        
+        resetTimer();
+        console.log('✅ Idle timer active on wrapper page');
+    </script>
+</body>
+</html>
