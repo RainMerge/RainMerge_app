@@ -521,6 +521,7 @@ function resetIdleTimer() {
   clearTimeout(idleTimer);
   idleTimer = setTimeout(() => {
     console.log('Inactive for 30 seconds, switching to idle mode...');
+    sessionStorage.setItem('returnUrl', window.location.href); 
     window.location.href = 'idle_index.html';
   }, IDLE_TIMEOUT);
 }
