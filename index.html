@@ -507,13 +507,34 @@ addEventListener('click', ()=>{
 });
 
 /* Launch App button handler */
-/* Launch App button handler */
 document.getElementById('launchBtn').addEventListener('click', (e)=>{
-  e.stopPropagation();
+  e.stopPropagation(); // Prevent globe click handler
   console.log('Launch App clicked!');
-  // Send message to parent to switch views
-  window.parent.postMessage('launchApp', '*');
+  window.location.href = 'http://localhost:8080/guacamole/#/client/UHlRdDUgQXBwAGMAZGVmYXVsdA';
 });
+
+/* ===== Inactivity Timer (30 seconds) ===== */
+let idleTimer;
+const IDLE_TIMEOUT = 30000; // 30 seconds
+
+function resetIdleTimer() {
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    console.log('Inactive for 30 seconds, switching to idle mode...');
+    window.location.href = 'idle_index.html';
+  }, IDLE_TIMEOUT);
+}
+
+// Reset timer on any user activity
+const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+activityEvents.forEach(event => {
+  document.addEventListener(event, resetIdleTimer, true);
+});
+
+// Start the timer when page loads
+resetIdleTimer();
+console.log('Inactivity timer started (30 seconds)');
+
 </script>
 </body>
 </html>
