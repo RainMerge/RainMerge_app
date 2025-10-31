@@ -1,28 +1,37 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Shader Point-Globe, Hover Blend</title>
+<title>Idle Mode - Click to wake</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{height:100%}
   body{
     font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     background:radial-gradient(ellipse at bottom,#0b132b 0%,#000 100%);
-    color:#fff;overflow:hidden
+    color:#fff;overflow:hidden;
+    cursor: pointer;
   }
   #credit{
     position:absolute;right:10px;bottom:10px;z-index:5;
     background:rgba(0,0,0,.35);padding:6px 10px;border-radius:6px;font-size:12px
   }
+  #wakeHint{
+    position:absolute;left:50%;top:10%;transform:translateX(-50%);
+    font-size:.95rem;color:rgba(255,255,255,.5);letter-spacing:.4px;
+    animation: fadeInOut 3s infinite;
+  }
+  @keyframes fadeInOut {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.8; }
+  }
 </style>
 </head>
 <body>
+<div id="wakeHint">Click anywhere to wake...</div>
 <div id="credit">Textures: three.js examples, NASA derived.</div>
 
-<!-- Import map so addons that import 'three' resolve in the browser -->
 <script type="importmap">
 {
   "imports": {
@@ -59,9 +68,9 @@ loader.setCrossOrigin('anonymous');
 
 const TEX_SPRITE = "https://threejs.org/examples/textures/sprites/circle.png";
 const TEX_COLOR  = "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_atmos_4096.jpg";
-const TEX_ELEV   = "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_normal_2048.jpg"; // used as bump source
-const TEX_ALPHA  = "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_specular_2048.jpg"; // ocean mask proxy
-const TEX_OTHER  = "https://threejs.org/examples/textures/uv_grid_opengl.jpg"; // hover blend
+const TEX_ELEV   = "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_normal_2048.jpg";
+const TEX_ALPHA  = "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_specular_2048.jpg";
+const TEX_OTHER  = "https://threejs.org/examples/textures/uv_grid_opengl.jpg";
 
 const starSprite = loader.load(TEX_SPRITE);
 const colorMap   = loader.load(TEX_COLOR);
@@ -80,7 +89,7 @@ const globePickMesh = new THREE.Mesh(pickGeo, pickMat);
 globeGroup.add(globePickMesh);
 
 /* Point cloud shell with custom shaders */
-const detail = 120; // higher gives denser points
+const detail = 120;
 const pointsGeo = new THREE.IcosahedronGeometry(1.0, detail);
 
 const vertexShader = `
@@ -100,7 +109,7 @@ const vertexShader = `
     vec3 vNormal = normalize(normalMatrix * normal);
     vVisible = step(0.0, dot(-normalize(mvPosition.xyz), normalize(vNormal)));
 
-    float elv = texture2D(elevTexture, vUv).r;     // read "bump" from normal map's R
+    float elv = texture2D(elevTexture, vUv).r;
     mvPosition.z += 0.35 * elv;
 
     float dist = distance(mouseUV, vUv);
@@ -129,7 +138,6 @@ const fragmentShader = `
   void main(){
     if (floor(vVisible + 0.1) == 0.0) discard;
 
-    // oceans bright in spec map, invert to alpha
     float alpha = 1.0 - texture2D(alphaTexture, vUv).r;
 
     vec3 color = texture2D(colorTexture, vUv).rgb;
@@ -209,6 +217,12 @@ addEventListener('resize', ()=>{
   camera.aspect = innerWidth/innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
+});
+
+/* ---------- Return to main app on any click ---------- */
+addEventListener('click', ()=>{
+  console.log('Waking up - returning to Docker app...');
+  window.location.href = 'http://localhost:8080/guacamole/#/client/UHlRdDUgQXBwAGMAZGVmYXVsdA';
 });
 </script>
 </body>
