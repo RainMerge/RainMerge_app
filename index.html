@@ -3,16 +3,15 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Climate Analysis Tool — Realistic Earth</title>
+<title>Climate Analysis Tool – Realistic Earth</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   body{
-    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     background:radial-gradient(ellipse at bottom,#0b132b 0%,#000 100%);
-    min-height:100vh;overflow:hidden;display:flex;justify-content:center;
-    align-items:center;flex-direction:column;color:#fff}
+    min-height:100vh;overflow:hidden;display:flex;justify-content:center;align-items:center;flex-direction:column;color:#fff}
   #loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-           color:rgba(255,255,255,.85);font-size:1.1rem;animation:pulse 1.5s infinite;text-align:center}
+    color:rgba(255,255,255,.85);font-size:1.05rem;animation:pulse 1.5s infinite;text-align:center;white-space:pre-line}
   @keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
   .btn{position:absolute;bottom:70px;background:linear-gradient(135deg,#007cf0 0%,#00dfd8 100%);
        color:#fff;border:0;padding:16px 60px;border-radius:40px;font-weight:600;text-decoration:none;
@@ -21,101 +20,146 @@
 </style>
 </head>
 <body>
-<div id="loading">Loading Earth…<br/><small>If this stays, your network may block CDNs.</small></div>
+<div id="loading">Loading Earth textures…</div>
 <canvas id="earthCanvas"></canvas>
 <a class="btn" href="https://YOUR_CLOUDFLARE_URL_HERE/guacamole" target="_blank">Launch Tool</a>
-<div class="credit">Textures © NASA Earth Observatory • Powered by Three.js</div>
+<div class="credit">Textures: NASA based. Engine: Three.js</div>
 
-<!-- Load Three.js from two CDNs, then OrbitControls. Classic scripts, not modules. -->
+<!-- Libraries first, two CDNs with fallback -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.164/build/three.min.js"
         onerror="var s=document.createElement('script');s.src='https://unpkg.com/three@0.164.0/build/three.min.js';document.head.appendChild(s);"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.164/examples/js/controls/OrbitControls.min.js"
         onerror="var s=document.createElement('script');s.src='https://unpkg.com/three@0.164.0/examples/js/controls/OrbitControls.min.js';document.head.appendChild(s);"></script>
 
 <script>
-(function boot(){
-  // Wait for THREE and OrbitControls to exist
+(function start(){
   function ready(){ return !!(window.THREE && THREE.OrbitControls); }
-  function startWhenReady(){
-    if(!ready()) return setTimeout(startWhenReady, 120);
-    start();
-  }
-  startWhenReady();
+  function wait(){ if(!ready()) return setTimeout(wait, 120); init(); }
+  wait();
 
-  function start(){
-    const loading = document.getElementById('loading');
-    const canvas  = document.getElementById('earthCanvas');
-    const scene   = new THREE.Scene();
-    const camera  = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 2000);
+  function setStatus(msg){ const el=document.getElementById('loading'); if(el) el.textContent = msg; }
+
+  // Try a list of URLs until one loads
+  function loadAny(urls, onOk, onFail){
+    const loader = new THREE.TextureLoader();
+    loader.setCrossOrigin('anonymous');
+    let i=0;
+    function tryNext(){
+      if(i>=urls.length){ onFail && onFail(); return; }
+      const url = urls[i++]; setStatus("Loading: " + url);
+      loader.load(url, t=>onOk(t), undefined, tryNext);
+    }
+    tryNext();
+  }
+
+  function init(){
+    const canvas = document.getElementById('earthCanvas');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 2000);
     camera.position.set(0, 0.4, 2.6);
 
     const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
     renderer.setSize(innerWidth, innerHeight);
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 
-    const loader = new THREE.TextureLoader();
-    const done = () => loading?.remove();
-    const fail = e => { console.error('Texture load error', e); loading.textContent='Texture load error. Check network.'; };
-
-    const texColor = loader.load("https://cdn.jsdelivr.net/gh/rajtilakjee/earth-globe-textures@main/earthmap4k.jpg", done, undefined, fail);
-    const texBump  = loader.load("https://cdn.jsdelivr.net/gh/rajtilakjee/earth-globe-textures@main/earthbump.jpg", undefined, undefined, fail);
-    const texSpec  = loader.load("https://cdn.jsdelivr.net/gh/rajtilakjee/earth-globe-textures@main/earthspec.jpg", undefined, undefined, fail);
-    const texCloud = loader.load("https://cdn.jsdelivr.net/gh/rajtilakjee/earth-globe-textures@main/earthcloudmaptrans.jpg", undefined, undefined, fail);
-    const texNight = loader.load("https://cdn.jsdelivr.net/gh/rajtilakjee/earth-globe-textures@main/earthlights.jpg", undefined, undefined, fail);
-
+    // Base meshes
     const earth = new THREE.Mesh(
-      new THREE.SphereGeometry(1, 96, 96),
-      new THREE.MeshPhongMaterial({ map: texColor, bumpMap: texBump, bumpScale: 0.045,
-        specularMap: texSpec, specular: new THREE.Color('grey'), shininess: 10 })
+      new THREE.SphereGeometry(1, 128, 128),
+      new THREE.MeshPhongMaterial({ color: 0x4b89c4, shininess: 10, specular: new THREE.Color(0x333333) })
     );
     scene.add(earth);
 
     const night = new THREE.Mesh(
-      new THREE.SphereGeometry(1.001, 96, 96),
-      new THREE.MeshBasicMaterial({ map: texNight, transparent:true, opacity:0.6, blending:THREE.AdditiveBlending })
+      new THREE.SphereGeometry(1.001, 128, 128),
+      new THREE.MeshBasicMaterial({ transparent:true, opacity:0.6, blending:THREE.AdditiveBlending })
     );
     scene.add(night);
 
     const clouds = new THREE.Mesh(
-      new THREE.SphereGeometry(1.01, 96, 96),
-      new THREE.MeshLambertMaterial({ map: texCloud, transparent:true, opacity:0.35, depthWrite:false })
+      new THREE.SphereGeometry(1.012, 64, 64),
+      new THREE.MeshLambertMaterial({ transparent:true, opacity:0.45, depthWrite:false })
     );
     scene.add(clouds);
 
     const atmosphere = new THREE.Mesh(
-      new THREE.SphereGeometry(1.06, 96, 96),
-      new THREE.MeshBasicMaterial({ color: 0x3aa8ff, transparent:true, opacity:0.18 })
+      new THREE.SphereGeometry(1.07, 64, 64),
+      new THREE.MeshBasicMaterial({ color:0x3aa8ff, transparent:true, opacity:0.18 })
     );
     scene.add(atmosphere);
 
-    scene.add(new THREE.AmbientLight(0x222222));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-    sun.position.set(5, 2, 5);
+    // Lights
+    scene.add(new THREE.AmbientLight(0x444444));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+    sun.position.set(5,2,5);
     scene.add(sun);
 
-    // Starfield
+    // Stars
     const g = new THREE.BufferGeometry(), pos = new Float32Array(6000*3);
-    for (let i=0;i<6000;i++){ pos[i*3]=(Math.random()-.5)*2000; pos[i*3+1]=(Math.random()-.5)*2000; pos[i*3+2]=-Math.random()*2000; }
+    for(let i=0;i<6000;i++){ pos[i*3]=(Math.random()-.5)*2000; pos[i*3+1]=(Math.random()-.5)*2000; pos[i*3+2]=-Math.random()*2000; }
     g.setAttribute('position', new THREE.BufferAttribute(pos,3));
-    scene.add(new THREE.Points(g, new THREE.PointsMaterial({ size:1, color:0xffffff })));
+    scene.add(new THREE.Points(g, new THREE.PointsMaterial({size:1,color:0xffffff})));
 
+    // Controls
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping=true; controls.enableZoom=false; controls.enablePan=false;
-    controls.autoRotate=true; controls.autoRotateSpeed=0.35;
+    controls.autoRotate=true; controls.autoRotateSpeed=0.12;
+
+    // Multi-source texture mirrors
+    const DAY = [
+      "https://threejs.org/examples/textures/planets/earth_atmos_4096.jpg",
+      "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_atmos_4096.jpg",
+      "https://unpkg.com/three@0.128.0/examples/textures/planets/earth_atmos_4096.jpg",
+      "https://threejsfundamentals.org/threejs/resources/images/earth.jpg"
+    ];
+    const SPEC = [
+      "https://threejs.org/examples/textures/planets/earth_specular_2048.jpg",
+      "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_specular_2048.jpg",
+      "https://unpkg.com/three@0.128.0/examples/textures/planets/earth_specular_2048.jpg"
+    ];
+    const NORMAL = [
+      "https://threejs.org/examples/textures/planets/earth_normal_2048.jpg",
+      "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_normal_2048.jpg",
+      "https://unpkg.com/three@0.128.0/examples/textures/planets/earth_normal_2048.jpg"
+    ];
+    const CLOUDS = [
+      "https://threejs.org/examples/textures/planets/earth_clouds_1024.png",
+      "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_clouds_1024.png",
+      "https://unpkg.com/three@0.128.0/examples/textures/planets/earth_clouds_1024.png"
+    ];
+    const NIGHTT = [
+      "https://threejs.org/examples/textures/planets/earth_lights_2048.png",
+      "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_lights_2048.png",
+      "https://unpkg.com/three@0.128.0/examples/textures/planets/earth_lights_2048.png"
+    ];
+
+    // Load textures with fallbacks
+    let dayOk=false, cloudsOk=false;
+    function doneOrFallback(){
+      const el=document.getElementById('loading');
+      if(dayOk && cloudsOk){ if(el) el.remove(); }
+      else setStatus("Using fallback visuals. Some texture sources blocked.");
+    }
+
+    loadAny(DAY,    t=>{ earth.material.map=t; earth.material.needsUpdate=true; dayOk=true; doneOrFallback(); }, doneOrFallback);
+    loadAny(SPEC,   t=>{ earth.material.specularMap=t; earth.material.needsUpdate=true; });
+    loadAny(NORMAL, t=>{ earth.material.normalMap=t; earth.material.normalScale=new THREE.Vector2(0.6,0.6); earth.material.needsUpdate=true; });
+    loadAny(CLOUDS, t=>{ clouds.material.map=t; clouds.material.alphaMap=t; clouds.material.needsUpdate=true; cloudsOk=true; doneOrFallback(); }, doneOrFallback);
+    loadAny(NIGHTT, t=>{ night.material.map=t; night.material.needsUpdate=true; });
 
     addEventListener('resize', ()=>{
       camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
-      renderer.setSize(innerWidth, innerHeight);
+      renderer.setSize(innerWidth,innerHeight);
     });
 
     const clock=new THREE.Clock();
     (function animate(){
       requestAnimationFrame(animate);
       const dt=clock.getDelta();
-      clouds.rotation.y += dt*0.015;
+      earth.rotation.y += dt*0.02;
+      clouds.rotation.y += dt*0.03;
       night.rotation.y = earth.rotation.y;
       controls.update();
-      renderer.render(scene, camera);
+      renderer.render(scene,camera);
     })();
   }
 })();
