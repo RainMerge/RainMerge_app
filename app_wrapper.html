@@ -47,64 +47,24 @@
         // ===== IDLE TIMER =====
         const IDLE_TIMEOUT = 30000; // 30 seconds
         let idleTimer;
-        let lastActivity = Date.now();
-        let activityCount = 0;
-        
-        const countdownEl = document.getElementById('countdown');
-        const timerBar = document.getElementById('timerBar');
-        
-        function resetTimer() {
-            clearTimeout(idleTimer);
-            lastActivity = Date.now();
-            activityCount++;
-            
-            console.log(`Activity detected (#${activityCount}) - timer reset`);
-            
-            idleTimer = setTimeout(() => {
-                console.log('⏰ 30 SECONDS IDLE - REDIRECTING TO SCREENSAVER');
-                sessionStorage.setItem('returnUrl', window.location.href);
-                window.location.href = 'idle_index.html';
-            }, IDLE_TIMEOUT);
-        }
-        
-        // Update countdown display
-        setInterval(() => {
-            const elapsed = Date.now() - lastActivity;
-            const remaining = Math.max(0, (IDLE_TIMEOUT - elapsed) / 1000);
-            countdownEl.textContent = remaining.toFixed(1);
-            
-            // Visual warning when < 10 seconds
-            if (remaining < 10) {
-                timerBar.classList.add('warning');
-            } else {
-                timerBar.classList.remove('warning');
-            }
-        }, 100);
-        
-        // Listen for activity on THIS PAGE
-        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click', 'wheel'];
-        events.forEach(event => {
-            document.addEventListener(event, resetTimer, true);
-        });
-        
-        // Listen for activity inside iframe (if possible)
-        const iframe = document.getElementById('appFrame');
-        iframe.addEventListener('load', () => {
-            console.log('✅ Iframe loaded');
-            try {
-                // Try to listen to iframe events (might fail if cross-origin)
-                iframe.contentWindow.document.addEventListener('mousemove', resetTimer);
-                iframe.contentWindow.document.addEventListener('click', resetTimer);
-                console.log('✅ Listening to iframe events');
-            } catch (e) {
-                console.warn('⚠️ Cannot listen to iframe events (cross-origin)', e.message);
-                console.log('💡 Timer will only reset on activity OUTSIDE the iframe');
-            }
-        });
-        
+
+       function resetTimer() {
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+            console.log('⏰ 30 SECONDS IDLE - REDIRECTING TO SCREENSAVER');
+            sessionStorage.setItem('returnUrl', window.location.href);
+            window.location.href = 'idle_index.html';
+        }, IDLE_TIMEOUT);
+    }
+
         resetTimer();
-        console.log('✅ Idle timer started (30 seconds)');
-        console.log('📊 Activity count:', activityCount);
+ // Activity events
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click', 'wheel'];
+    events.forEach(event => {
+        document.addEventListener(event, resetTimer, true);
+    });
+
+    console.log('✅ Idle timer started (30 seconds)');
     </script>
 </body>
 </html>
