@@ -3,23 +3,28 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Climate Analysis Tool, Realistic Earth</title>
+<title>Climate Analysis Tool – Realistic Earth</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   body{
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     background:radial-gradient(ellipse at bottom,#0b132b 0%,#000 100%);
-    min-height:100vh;overflow:hidden;display:flex;justify-content:center;align-items:center;flex-direction:column;color:#fff}
-  #loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:rgba(255,255,255,.85);font-size:1.1rem;animation:pulse 1.5s infinite}
-  @keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
-  .btn-container{position:absolute;bottom:70px;opacity:0;transform:translateY(40px);animation:fadeIn 1s ease-out 3s forwards}
+    min-height:100vh;overflow:hidden;
+    display:flex;justify-content:center;align-items:center;flex-direction:column;color:#fff}
+  #loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    color:rgba(255,255,255,.8);font-size:1.1rem;animation:pulse 1.5s infinite}
+  @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+  .btn-container{position:absolute;bottom:70px;opacity:0;transform:translateY(40px);
+    animation:fadeIn 1s ease-out 3s forwards}
   @keyframes fadeIn{to{opacity:1;transform:translateY(0)}}
-  .btn{background:linear-gradient(135deg,#007cf0 0%,#00dfd8 100%);color:#fff;border:0;padding:16px 60px;border-radius:40px;font-weight:600;text-decoration:none;box-shadow:0 10px 40px rgba(0,223,216,.5)}
+  .btn{background:linear-gradient(135deg,#007cf0 0%,#00dfd8 100%);
+    color:#fff;border:0;padding:16px 60px;border-radius:40px;
+    font-weight:600;text-decoration:none;box-shadow:0 10px 40px rgba(0,223,216,.5)}
   .credit{position:absolute;bottom:14px;font-size:12px;color:rgba(255,255,255,.6)}
 </style>
 </head>
 <body>
-<div id="loading">Loading Earth...</div>
+<div id="loading">Loading Earth ...</div>
 <canvas id="earthCanvas"></canvas>
 
 <div class="btn-container">
@@ -27,87 +32,87 @@
 </div>
 <div class="credit">Textures © NASA Earth Observatory • Powered by Three.js</div>
 
-<!-- Non-module global builds, no bundler required -->
+<!-- Load libraries FIRST -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.164/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.164/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.164/examples/js/controls/OrbitControls.min.js"></script>
 
+<!-- Then run your code -->
 <script>
-  // Three.js is available as window.THREE here
-  const canvas = document.getElementById('earthCanvas');
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 2000);
-  camera.position.set(0, 0.4, 2.6);
+const canvas=document.getElementById('earthCanvas');
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,2000);
+camera.position.set(0,0.4,2.6);
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 
-  const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
-  renderer.setSize(innerWidth, innerHeight);
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const loader=new THREE.TextureLoader();
+const removeLoading=()=>document.getElementById('loading')?.remove();
+const texColor=loader.load("https://cdn.jsdelivr.net/gh/rajtilakjee/earth-globe-textures@main/earthmap4k.jpg",removeLoading);
+const texBump=loader.load("https://cdn.jsdelivr.net/gh/rajtilakjee/earth-globe-textures@main/earthbump.jpg");
+const texSpec=loader.load("https://cdn.jsdelivr.net/gh/rajtilakjee/earth-globe-textures@main/earthspec.jpg");
+const texCloud=loader.load("https://cdn.jsdelivr.net/gh/rajtilakjee/earth-globe-textures@main/earthcloudmaptrans.jpg");
+const texNight=loader.load("https://cdn.jsdelivr.net/gh/rajtilakjee/earth-globe-textures@main/earthlights.jpg");
 
-  const loader = new THREE.TextureLoader();
-  const onFirstLoaded = () => document.getElementById('loading')?.remove();
+const earth=new THREE.Mesh(
+  new THREE.SphereGeometry(1,96,96),
+  new THREE.MeshPhongMaterial({map:texColor,bumpMap:texBump,bumpScale:0.045,
+    specularMap:texSpec,specular:new THREE.Color('grey'),shininess:10})
+);
+scene.add(earth);
 
-  // CORS-safe textures via jsDelivr
-  const texColor = loader.load("https://cdn.jsdelivr.net/gh/rajtilakjee/earth-globe-textures@main/earthmap4k.jpg", onFirstLoaded);
-  const texBump  = loader.load("https://cdn.jsdelivr.net/gh/rajtilakjee/earth-globe-textures@main/earthbump.jpg");
-  const texSpec  = loader.load("https://cdn.jsdelivr.net/gh/rajtilakjee/earth-globe-textures@main/earthspec.jpg");
-  const texCloud = loader.load("https://cdn.jsdelivr.net/gh/rajtilakjee/earth-globe-textures@main/earthcloudmaptrans.jpg");
-  const texNight = loader.load("https://cdn.jsdelivr.net/gh/rajtilakjee/earth-globe-textures@main/earthlights.jpg");
+const night=new THREE.Mesh(
+  new THREE.SphereGeometry(1.001,96,96),
+  new THREE.MeshBasicMaterial({map:texNight,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending})
+);
+scene.add(night);
 
-  const gEarth = new THREE.SphereGeometry(1, 96, 96);
-  const mEarth = new THREE.MeshPhongMaterial({
-    map: texColor, bumpMap: texBump, bumpScale: 0.045,
-    specularMap: texSpec, specular: new THREE.Color('grey'), shininess: 10
-  });
-  const earth = new THREE.Mesh(gEarth, mEarth);
-  scene.add(earth);
+const clouds=new THREE.Mesh(
+  new THREE.SphereGeometry(1.01,96,96),
+  new THREE.MeshLambertMaterial({map:texCloud,transparent:true,opacity:0.35,depthWrite:false})
+);
+scene.add(clouds);
 
-  const night = new THREE.Mesh(
-    new THREE.SphereGeometry(1.001, 96, 96),
-    new THREE.MeshBasicMaterial({ map: texNight, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending })
-  );
-  scene.add(night);
+const atmosphere=new THREE.Mesh(
+  new THREE.SphereGeometry(1.06,96,96),
+  new THREE.MeshBasicMaterial({color:0x3aa8ff,transparent:true,opacity:0.18})
+);
+scene.add(atmosphere);
 
-  const clouds = new THREE.Mesh(
-    new THREE.SphereGeometry(1.01, 96, 96),
-    new THREE.MeshLambertMaterial({ map: texCloud, transparent: true, opacity: 0.35, depthWrite: false })
-  );
-  scene.add(clouds);
+scene.add(new THREE.AmbientLight(0x222222));
+const sun=new THREE.DirectionalLight(0xffffff,1.2);
+sun.position.set(5,2,5);
+scene.add(sun);
 
-  const atmosphere = new THREE.Mesh(
-    new THREE.SphereGeometry(1.06, 96, 96),
-    new THREE.MeshBasicMaterial({ color: 0x3aa8ff, transparent: true, opacity: 0.18 })
-  );
-  scene.add(atmosphere);
+// starfield
+const starGeom=new THREE.BufferGeometry();
+const pos=new Float32Array(6000*3);
+for(let i=0;i<6000;i++){
+  pos[i*3]=(Math.random()-0.5)*2000;
+  pos[i*3+1]=(Math.random()-0.5)*2000;
+  pos[i*3+2]=-Math.random()*2000;
+}
+starGeom.setAttribute('position',new THREE.BufferAttribute(pos,3));
+scene.add(new THREE.Points(starGeom,new THREE.PointsMaterial({size:1,color:0xffffff})));
 
-  scene.add(new THREE.AmbientLight(0x222222));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-  sun.position.set(5, 2, 5);
-  scene.add(sun);
+const controls=new THREE.OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;controls.enableZoom=false;controls.enablePan=false;
+controls.autoRotate=true;controls.autoRotateSpeed=0.35;
 
-  // Starfield
-  const starGeom = new THREE.BufferGeometry();
-  const starPos = new Float32Array(6000*3);
-  for(let i=0;i<6000;i++){ starPos[i*3]=(Math.random()-0.5)*2000; starPos[i*3+1]=(Math.random()-0.5)*2000; starPos[i*3+2]=-Math.random()*2000; }
-  starGeom.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-  scene.add(new THREE.Points(starGeom, new THREE.PointsMaterial({size:1, color:0xffffff})));
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
 
-  const controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true; controls.enableZoom = false; controls.enablePan = false;
-  controls.autoRotate = true; controls.autoRotateSpeed = 0.35;
-
-  addEventListener('resize', () => {
-    camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight);
-  });
-
-  const clock = new THREE.Clock();
-  (function animate(){
-    requestAnimationFrame(animate);
-    const dt = clock.getDelta();
-    clouds.rotation.y += dt * 0.015;
-    night.rotation.y = earth.rotation.y;
-    controls.update();
-    renderer.render(scene, camera);
-  })();
+const clock=new THREE.Clock();
+(function animate(){
+  requestAnimationFrame(animate);
+  const dt=clock.getDelta();
+  clouds.rotation.y+=dt*0.015;
+  night.rotation.y=earth.rotation.y;
+  controls.update();
+  renderer.render(scene,camera);
+})();
 </script>
 </body>
 </html>
