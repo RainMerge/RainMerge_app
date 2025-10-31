@@ -118,6 +118,9 @@
 </script>
 
 <script type="module">
+ window.addEventListener('pageshow', e => {
+    if (e.persisted) window.location.reload();
+});
 import * as THREE from "three";
 import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.164/examples/jsm/controls/OrbitControls.js";
 
