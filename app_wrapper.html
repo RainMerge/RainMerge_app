@@ -41,7 +41,9 @@
 
     <script>
         console.log('🚀 App wrapper loading...');
-        
+        window.addEventListener('pageshow', e => {
+            if (e.persisted) window.location.reload();
+        });
         // ===== IDLE TIMER =====
         const IDLE_TIMEOUT = 30000; // 30 seconds
         let idleTimer;
