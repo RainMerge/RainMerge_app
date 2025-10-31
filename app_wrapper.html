@@ -3,49 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App Viewer</title>
+    <title>App Viewer - DEBUG</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { height: 100%; overflow: hidden; }
         iframe { 
             width: 100%; 
-            height: 100%; 
+            height: calc(100% - 50px); /* Leave space for timer display */
             border: none; 
             display: block;
+        }
+        #timerBar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: monospace;
+            font-size: 20px;
+            z-index: 9999;
+        }
+        #timerBar.warning {
+            background: rgba(255, 0, 0, 0.8);
         }
     </style>
 </head>
 <body>
+    <div id="timerBar">⏰ Idle timer: <span id="countdown">30.0</span>s | Move mouse to reset</div>
+    
     <!-- Guacamole embedded here -->
     <iframe id="appFrame" src="http://localhost:8080/guacamole/#/client/UHlRdDUgQXBwAGMAZGVmYXVsdA" allow="clipboard-read; clipboard-write"></iframe>
 
     <script>
+        console.log('🚀 App wrapper loading...');
+        
         // ===== IDLE TIMER =====
         const IDLE_TIMEOUT = 30000; // 30 seconds
         let idleTimer;
+        let lastActivity = Date.now();
+        let activityCount = 0;
+        
+        const countdownEl = document.getElementById('countdown');
+        const timerBar = document.getElementById('timerBar');
         
         function resetTimer() {
             clearTimeout(idleTimer);
+            lastActivity = Date.now();
+            activityCount++;
+            
+            console.log(`Activity detected (#${activityCount}) - timer reset`);
+            
             idleTimer = setTimeout(() => {
-                console.log('30 seconds idle - going to screensaver');
+                console.log('⏰ 30 SECONDS IDLE - REDIRECTING TO SCREENSAVER');
                 sessionStorage.setItem('returnUrl', window.location.href);
                 window.location.href = 'idle_index.html';
             }, IDLE_TIMEOUT);
         }
         
+        // Update countdown display
+        setInterval(() => {
+            const elapsed = Date.now() - lastActivity;
+            const remaining = Math.max(0, (IDLE_TIMEOUT - elapsed) / 1000);
+            countdownEl.textContent = remaining.toFixed(1);
+            
+            // Visual warning when < 10 seconds
+            if (remaining < 10) {
+                timerBar.classList.add('warning');
+            } else {
+                timerBar.classList.remove('warning');
+            }
+        }, 100);
+        
         // Listen for activity on THIS PAGE
-        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click', 'wheel'];
         events.forEach(event => {
             document.addEventListener(event, resetTimer, true);
         });
         
-        // Also listen for activity inside the iframe (if same origin)
-        window.addEventListener('message', (e) => {
-            if (e.data === 'activity') resetTimer();
+        // Listen for activity inside iframe (if possible)
+        const iframe = document.getElementById('appFrame');
+        iframe.addEventListener('load', () => {
+            console.log('✅ Iframe loaded');
+            try {
+                // Try to listen to iframe events (might fail if cross-origin)
+                iframe.contentWindow.document.addEventListener('mousemove', resetTimer);
+                iframe.contentWindow.document.addEventListener('click', resetTimer);
+                console.log('✅ Listening to iframe events');
+            } catch (e) {
+                console.warn('⚠️ Cannot listen to iframe events (cross-origin)', e.message);
+                console.log('💡 Timer will only reset on activity OUTSIDE the iframe');
+            }
         });
         
         resetTimer();
-        console.log('✅ Idle timer active on wrapper page');
+        console.log('✅ Idle timer started (30 seconds)');
+        console.log('📊 Activity count:', activityCount);
     </script>
 </body>
 </html>
