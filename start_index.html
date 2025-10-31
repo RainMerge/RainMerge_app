@@ -63,12 +63,42 @@
     height: 2px;
     transform: translateY(-50%);
   }
+  
+  /* Launch App Button */
+  #launchBtn {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    padding: 14px 32px;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s ease;
+    font-family: inherit;
+  }
+  #launchBtn:hover {
+    transform: translateX(-50%) translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+  }
+  #launchBtn:active {
+    transform: translateX(-50%) translateY(0);
+  }
 </style>
 </head>
 <body>
 <div id="hint">Powering up... then I will zoom to your region</div>
 <div id="credit">Textures from three.js examples (NASA derived). Press S to skip. Press C for crosshair.</div>
 <div id="crosshair" style="display:none;"></div>
+
+<button id="launchBtn">Launch App</button>
 
 <div id="hud" class="hidden">
   <h3>Globe Debug</h3>
@@ -474,6 +504,14 @@ addEventListener('click', ()=>{
     const { lat, lon } = debugState.pointerLL;
     console.log(`Clicked: lat ${lat.toFixed(3)}, lon ${lon.toFixed(3)}`);
   }
+});
+
+/* Launch App button handler */
+document.getElementById('launchBtn').addEventListener('click', (e)=>{
+  e.stopPropagation(); // Prevent globe click handler
+  console.log('Launch App clicked!');
+  // Add your app launch logic here
+  alert('App launching... 🚀');
 });
 </script>
 </body>
