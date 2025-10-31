@@ -3,166 +3,478 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Climate Analysis Tool – Realistic Earth</title>
+<title>Point-Globe - FINAL WORKING VERSION</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
   body{
     font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     background:radial-gradient(ellipse at bottom,#0b132b 0%,#000 100%);
-    min-height:100vh;overflow:hidden;display:flex;justify-content:center;align-items:center;flex-direction:column;color:#fff}
-  #loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-    color:rgba(255,255,255,.85);font-size:1.05rem;animation:pulse 1.5s infinite;text-align:center;white-space:pre-line}
-  @keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
-  .btn{position:absolute;bottom:70px;background:linear-gradient(135deg,#007cf0 0%,#00dfd8 100%);
-       color:#fff;border:0;padding:16px 60px;border-radius:40px;font-weight:600;text-decoration:none;
-       box-shadow:0 10px 40px rgba(0,223,216,.5)}
-  .credit{position:absolute;bottom:14px;font-size:12px;color:rgba(255,255,255,.6)}
+    color:#fff;overflow:hidden;
+  }
+  #hint{
+    position:absolute;left:50%;top:10%;transform:translateX(-50%);
+    font-size:.95rem;color:rgba(255,255,255,.85);letter-spacing:.4px
+  }
+  #credit{
+    position:absolute;right:10px;bottom:10px;z-index:5;
+    background:rgba(0,0,0,.35);padding:6px 10px;border-radius:6px;font-size:12px
+  }
+  #hud{
+    position:absolute;top:10px;right:10px;z-index:10;
+    background:rgba(0,0,0,.55);padding:10px 12px;border-radius:8px;max-width:300px;
+    font:12px/1.35 system-ui, -apple-system, Segoe UI, Roboto, sans-serif
+  }
+  #hud.hidden{ display:none }
+  #hud h3{ margin:0 0 6px 0; font-size:13px }
+  #hud .row{ display:flex; justify-content:space-between; gap:8px }
+  #hud .mono{ font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace }
+  #hud .muted{ color:#cfcfcf }
+  
+  /* Crosshair to show screen center */
+  #crosshair {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 40px;
+    height: 40px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.7;
+  }
+  #crosshair::before,
+  #crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(255, 100, 100, 0.8);
+  }
+  #crosshair::before {
+    left: 50%;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    transform: translateX(-50%);
+  }
+  #crosshair::after {
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 2px;
+    transform: translateY(-50%);
+  }
 </style>
 </head>
 <body>
-<div id="loading">Loading Earth textures…</div>
-<canvas id="earthCanvas"></canvas>
-<a class="btn" href="https://YOUR_CLOUDFLARE_URL_HERE/guacamole" target="_blank">Launch Tool</a>
-<div class="credit">Textures: NASA based. Engine: Three.js</div>
+<div id="hint">Powering up... then I will zoom to your region</div>
+<div id="credit">Textures from three.js examples (NASA derived). Press S to skip. Press C for crosshair.</div>
+<div id="crosshair" style="display:none;"></div>
 
-<!-- Libraries first, two CDNs with fallback -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.164/build/three.min.js"
-        onerror="var s=document.createElement('script');s.src='https://unpkg.com/three@0.164.0/build/three.min.js';document.head.appendChild(s);"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.164/examples/js/controls/OrbitControls.min.js"
-        onerror="var s=document.createElement('script');s.src='https://unpkg.com/three@0.164.0/examples/js/controls/OrbitControls.min.js';document.head.appendChild(s);"></script>
+<div id="hud" class="hidden">
+  <h3>Globe Debug</h3>
+  <div class="row"><span>Screen center lat, lon</span><span class="mono" id="hud-screen-center">0, 0</span></div>
+  <div class="row"><span>Target lat, lon</span><span class="mono" id="hud-target">n/a</span></div>
+  <div class="row"><span>Screen error</span><span class="mono" id="hud-screen-error">n/a</span></div>
+  <div class="row"><span>Camera z</span><span class="mono" id="hud-camz">0</span></div>
+  <div class="muted">Keys: D toggle HUD, C toggle crosshair</div>
+</div>
 
-<script>
-(function start(){
-  function ready(){ return !!(window.THREE && THREE.OrbitControls); }
-  function wait(){ if(!ready()) return setTimeout(wait, 120); init(); }
-  wait();
-
-  function setStatus(msg){ const el=document.getElementById('loading'); if(el) el.textContent = msg; }
-
-  // Try a list of URLs until one loads
-  function loadAny(urls, onOk, onFail){
-    const loader = new THREE.TextureLoader();
-    loader.setCrossOrigin('anonymous');
-    let i=0;
-    function tryNext(){
-      if(i>=urls.length){ onFail && onFail(); return; }
-      const url = urls[i++]; setStatus("Loading: " + url);
-      loader.load(url, t=>onOk(t), undefined, tryNext);
-    }
-    tryNext();
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.164/build/three.module.js"
   }
+}
+</script>
 
-  function init(){
-    const canvas = document.getElementById('earthCanvas');
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 2000);
-    camera.position.set(0, 0.4, 2.6);
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.164/examples/jsm/controls/OrbitControls.js";
 
-    const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
-    renderer.setSize(innerWidth, innerHeight);
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+/* ===== Scene setup ===== */
+const scene   = new THREE.Scene();
+const camera  = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 1000);
+camera.position.set(0, 0, 6);
 
-    // Base meshes
-    const earth = new THREE.Mesh(
-      new THREE.SphereGeometry(1, 128, 128),
-      new THREE.MeshPhongMaterial({ color: 0x4b89c4, shininess: 10, specular: new THREE.Color(0x333333) })
-    );
-    scene.add(earth);
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+document.body.appendChild(renderer.domElement);
 
-    const night = new THREE.Mesh(
-      new THREE.SphereGeometry(1.001, 128, 128),
-      new THREE.MeshBasicMaterial({ transparent:true, opacity:0.6, blending:THREE.AdditiveBlending })
-    );
-    scene.add(night);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.enablePan = false;
+controls.zoomSpeed = 0.6;
 
-    const clouds = new THREE.Mesh(
-      new THREE.SphereGeometry(1.012, 64, 64),
-      new THREE.MeshLambertMaterial({ transparent:true, opacity:0.45, depthWrite:false })
-    );
-    scene.add(clouds);
+/* ===== Raycast ===== */
+const raycaster = new THREE.Raycaster();
+const pointer   = new THREE.Vector2();
 
-    const atmosphere = new THREE.Mesh(
-      new THREE.SphereGeometry(1.07, 64, 64),
-      new THREE.MeshBasicMaterial({ color:0x3aa8ff, transparent:true, opacity:0.18 })
-    );
-    scene.add(atmosphere);
+/* ===== Textures ===== */
+const loader = new THREE.TextureLoader();
+loader.setCrossOrigin('anonymous');
 
-    // Lights
-    scene.add(new THREE.AmbientLight(0x444444));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.4);
-    sun.position.set(5,2,5);
-    scene.add(sun);
+const TEX_SPRITE = "https://threejs.org/examples/textures/sprites/circle.png";
+const TEX_COLOR  = "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_atmos_4096.jpg";
+const TEX_ELEV   = "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_normal_2048.jpg";
+const TEX_ALPHA  = "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_specular_2048.jpg";
+const TEX_OTHER  = "https://threejs.org/examples/textures/uv_grid_opengl.jpg";
 
-    // Stars
-    const g = new THREE.BufferGeometry(), pos = new Float32Array(6000*3);
-    for(let i=0;i<6000;i++){ pos[i*3]=(Math.random()-.5)*2000; pos[i*3+1]=(Math.random()-.5)*2000; pos[i*3+2]=-Math.random()*2000; }
-    g.setAttribute('position', new THREE.BufferAttribute(pos,3));
-    scene.add(new THREE.Points(g, new THREE.PointsMaterial({size:1,color:0xffffff})));
+const starSprite = loader.load(TEX_SPRITE);
+const colorMap   = loader.load(TEX_COLOR);
+const elevMap    = loader.load(TEX_ELEV);
+const alphaMap   = loader.load(TEX_ALPHA);
+const otherMap   = loader.load(TEX_OTHER);
 
-    // Controls
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping=true; controls.enableZoom=false; controls.enablePan=false;
-    controls.autoRotate=true; controls.autoRotateSpeed=0.12;
+/* ===== Globe objects - BACK TO ORIGINAL STRUCTURE ===== */
+const spinGroup = new THREE.Group();
+scene.add(spinGroup);
 
-    // Multi-source texture mirrors
-    const DAY = [
-      "https://threejs.org/examples/textures/planets/earth_atmos_4096.jpg",
-      "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_atmos_4096.jpg",
-      "https://unpkg.com/three@0.128.0/examples/textures/planets/earth_atmos_4096.jpg",
-      "https://threejsfundamentals.org/threejs/resources/images/earth.jpg"
-    ];
-    const SPEC = [
-      "https://threejs.org/examples/textures/planets/earth_specular_2048.jpg",
-      "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_specular_2048.jpg",
-      "https://unpkg.com/three@0.128.0/examples/textures/planets/earth_specular_2048.jpg"
-    ];
-    const NORMAL = [
-      "https://threejs.org/examples/textures/planets/earth_normal_2048.jpg",
-      "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_normal_2048.jpg",
-      "https://unpkg.com/three@0.128.0/examples/textures/planets/earth_normal_2048.jpg"
-    ];
-    const CLOUDS = [
-      "https://threejs.org/examples/textures/planets/earth_clouds_1024.png",
-      "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_clouds_1024.png",
-      "https://unpkg.com/three@0.128.0/examples/textures/planets/earth_clouds_1024.png"
-    ];
-    const NIGHTT = [
-      "https://threejs.org/examples/textures/planets/earth_lights_2048.png",
-      "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_lights_2048.png",
-      "https://unpkg.com/three@0.128.0/examples/textures/planets/earth_lights_2048.png"
-    ];
+const tiltGroup = new THREE.Group();
+tiltGroup.rotation.x = THREE.MathUtils.degToRad(23.4);
+spinGroup.add(tiltGroup);
 
-    // Load textures with fallbacks
-    let dayOk=false, cloudsOk=false;
-    function doneOrFallback(){
-      const el=document.getElementById('loading');
-      if(dayOk && cloudsOk){ if(el) el.remove(); }
-      else setStatus("Using fallback visuals. Some texture sources blocked.");
-    }
+// pick shell — SphereGeometry for correct UVs
+const pickGeo = new THREE.SphereGeometry(1.0, 64, 64);
+const pickMat = new THREE.MeshBasicMaterial({ 
+  transparent: true, 
+  opacity: 0.0 
+});
+const globePickMesh = new THREE.Mesh(pickGeo, pickMat);
+tiltGroup.add(globePickMesh);
 
-    loadAny(DAY,    t=>{ earth.material.map=t; earth.material.needsUpdate=true; dayOk=true; doneOrFallback(); }, doneOrFallback);
-    loadAny(SPEC,   t=>{ earth.material.specularMap=t; earth.material.needsUpdate=true; });
-    loadAny(NORMAL, t=>{ earth.material.normalMap=t; earth.material.normalScale=new THREE.Vector2(0.6,0.6); earth.material.needsUpdate=true; });
-    loadAny(CLOUDS, t=>{ clouds.material.map=t; clouds.material.alphaMap=t; clouds.material.needsUpdate=true; cloudsOk=true; doneOrFallback(); }, doneOrFallback);
-    loadAny(NIGHTT, t=>{ night.material.map=t; night.material.needsUpdate=true; });
-
-    addEventListener('resize', ()=>{
-      camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
-      renderer.setSize(innerWidth,innerHeight);
-    });
-
-    const clock=new THREE.Clock();
-    (function animate(){
-      requestAnimationFrame(animate);
-      const dt=clock.getDelta();
-      earth.rotation.y += dt*0.02;
-      clouds.rotation.y += dt*0.03;
-      night.rotation.y = earth.rotation.y;
-      controls.update();
-      renderer.render(scene,camera);
-    })();
+// high-res point cloud
+const pointsGeo = new THREE.SphereGeometry(1.0, 512, 256);
+const vertexShader = `
+  uniform float size;
+  uniform sampler2D elevTexture;
+  uniform vec2 mouseUV;
+  varying vec2 vUv;
+  varying float vVisible;
+  varying float vDist;
+  void main(){
+    vUv = uv;
+    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    vec3 vNormal = normalize(normalMatrix * normal);
+    vVisible = step(0.0, dot(-normalize(mvPosition.xyz), normalize(vNormal)));
+    float elv = texture2D(elevTexture, vUv).r;
+    mvPosition.z += 0.35 * elv;
+    float dist = distance(mouseUV, vUv);
+    if (dist < 0.04) mvPosition.z += (0.04 - dist) * 10.0;
+    vDist = dist;
+    gl_PointSize = size;
+    gl_Position = projectionMatrix * mvPosition;
   }
-})();
+`;
+const fragmentShader = `
+  uniform sampler2D colorTexture;
+  uniform sampler2D alphaTexture;
+  uniform sampler2D otherTexture;
+  varying vec2 vUv;
+  varying float vVisible;
+  varying float vDist;
+  void main(){
+    if (floor(vVisible + 0.1) == 0.0) discard;
+    float alpha = 1.0 - texture2D(alphaTexture, vUv).r;
+    vec3 color = texture2D(colorTexture, vUv).rgb;
+    vec3 other = texture2D(otherTexture, vUv).rgb;
+    if (vDist < 0.04) {
+      float t = (0.04 - vDist) * 50.0;
+      color = mix(color, other, clamp(t, 0.0, 1.0));
+    }
+    gl_FragColor = vec4(color, alpha);
+  }
+`;
+const uniforms = {
+  size:         { value: 3.2 },
+  colorTexture: { value: colorMap },
+  otherTexture: { value: otherMap },
+  elevTexture:  { value: elevMap },
+  alphaTexture: { value: alphaMap },
+  mouseUV:      { value: new THREE.Vector2(0.0, 0.0) }
+};
+const pointsMat = new THREE.ShaderMaterial({
+  uniforms, vertexShader, fragmentShader,
+  transparent: true, depthWrite: false
+});
+const points = new THREE.Points(pointsGeo, pointsMat);
+tiltGroup.add(points);
+
+/* ===== Lights and stars ===== */
+const hemi = new THREE.HemisphereLight(0xffffff, 0x080820, 0.0);
+scene.add(hemi);
+function getStarfield(num=4500, spriteTex=starSprite) {
+  const g = new THREE.BufferGeometry();
+  const positions = new Float32Array(num * 3);
+  const r = 110;
+  for (let i=0;i<num;i++){
+    const th = Math.random()*Math.PI*2;
+    const ph = Math.acos(2*Math.random()-1);
+    const rad = r + Math.random()*40;
+    positions[i*3+0] = rad*Math.sin(ph)*Math.cos(th);
+    positions[i*3+1] = rad*Math.sin(ph)*Math.sin(th);
+    positions[i*3+2] = rad*Math.cos(ph);
+  }
+  g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const m = new THREE.PointsMaterial({ map:spriteTex, size:2, transparent:true, depthWrite:false, color:0xffffff, opacity:0.0 });
+  const stars = new THREE.Points(g, m);
+  stars.userData.fadeMaterial = m;
+  return stars;
+}
+const stars = getStarfield();
+scene.add(stars);
+
+/* ===== Tweens ===== */
+function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
+function easeInOutQuad(t){ return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2)/2; }
+function tween(duration, update, done=()=>{}, ease=(x)=>x){
+  const t0 = performance.now();
+  function step(t){
+    const k = Math.min(1, (t - t0)/duration);
+    update(ease(k));
+    if (k < 1) requestAnimationFrame(step); else done();
+  }
+  requestAnimationFrame(step);
+}
+
+/* ===== Debug helpers ===== */
+const DEG = 180/Math.PI, RAD = Math.PI/180;
+const hudEl = document.getElementById("hud");
+const debugState = { enabled:false, target:{lat:0,lon:0,name:""}, pointerLL:null };
+
+function latLonToVec3(lat, lon, r=1){
+  const latR = THREE.MathUtils.degToRad(lat);
+  const lonR = THREE.MathUtils.degToRad(lon);
+  const cosLat = Math.cos(latR), sinLat = Math.sin(latR);
+  const cosLon = Math.cos(lonR), sinLon = Math.sin(lonR);
+  return new THREE.Vector3(
+    -cosLat * sinLon,
+    sinLat,
+    cosLat * cosLon
+  ).multiplyScalar(r);
+}
+
+function worldPointToLatLon(worldPoint) {
+  const p = worldPoint.clone();
+  const invTiltWorld = new THREE.Matrix4().copy(tiltGroup.matrixWorld).invert();
+  p.applyMatrix4(invTiltWorld).normalize();
+  const lat = THREE.MathUtils.radToDeg(Math.asin(p.y));
+  const lon = THREE.MathUtils.radToDeg(Math.atan2(-p.x, p.z));
+  return { lat, lon };
+}
+
+function getScreenCenterLatLon() {
+  raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+  const hit = raycaster.intersectObjects([globePickMesh], false)[0];
+  if (hit && hit.point) {
+    return worldPointToLatLon(hit.point);
+  }
+  return null;
+}
+
+function gcAngleDeg(a,b){
+  const la1=a.lat*RAD, lo1=a.lon*RAD, la2=b.lat*RAD, lo2=b.lon*RAD;
+  const dLa=la2-la1, dLo=lo2-lo1;
+  const h = Math.sin(dLa/2)**2 + Math.cos(la1)*Math.cos(la2)*Math.sin(dLo/2)**2;
+  return 2*Math.asin(Math.min(1,Math.sqrt(h)))*DEG;
+}
+
+const debugPin = new THREE.Mesh(
+  new THREE.SphereGeometry(0.02,16,16),
+  new THREE.MeshBasicMaterial({ color:0xff3366 })
+);
+debugPin.visible = false;
+tiltGroup.add(debugPin);
+
+function setDebugTarget(lat,lon,name=""){
+  debugState.target = { lat, lon, name };
+  debugPin.position.copy(latLonToVec3(lat, lon, 1.02));
+  debugPin.visible = true;
+  const t = document.getElementById("hud-target");
+  if (t) t.textContent = `${lat.toFixed(3)}, ${lon.toFixed(3)} ${name}`;
+}
+
+function updateHUD(){
+  if (!debugState.enabled) return;
+  const screenCenter = getScreenCenterLatLon();
+  const err = (debugPin.visible && screenCenter) ? gcAngleDeg(screenCenter, debugState.target).toFixed(2)+"°" : "n/a";
+  
+  document.getElementById("hud-screen-center").textContent = screenCenter 
+    ? `${screenCenter.lat.toFixed(3)}, ${screenCenter.lon.toFixed(3)}`
+    : "n/a";
+  document.getElementById("hud-screen-error").textContent = err;
+  document.getElementById("hud-camz").textContent = camera.position.z.toFixed(2);
+}
+
+const crosshair = document.getElementById('crosshair');
+addEventListener("keydown", e=>{
+  const k = e.key.toLowerCase();
+  if (k === "d"){ debugState.enabled = !debugState.enabled; hudEl.classList.toggle("hidden", !debugState.enabled); }
+  if (k === "c"){ crosshair.style.display = crosshair.style.display === 'none' ? 'block' : 'none'; }
+});
+
+/* ===== THE KEY FIX: Compensate for tilt when calculating rotation ===== */
+function targetQuaternionForLatLon(lat, lon) {
+  // Get target point in tiltGroup's local space (untilted sphere coords)
+  const vLocal = latLonToVec3(lat, lon).normalize();
+  
+  // Apply the tilt transform to see where this point ends up in world space
+  const tiltQuat = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(tiltGroup.rotation.x, 0, 0, 'XYZ')
+  );
+  const vTilted = vLocal.clone().applyQuaternion(tiltQuat).normalize();
+  
+  // Now calculate rotation needed to point vTilted at camera (+Z)
+  const cameraDir = new THREE.Vector3(0, 0, 1);
+  const rotQuat = new THREE.Quaternion().setFromUnitVectors(vTilted, cameraDir);
+  
+  return rotQuat;
+}
+
+/* ===== Power-on and fly ===== */
+const hintEl = document.getElementById('hint');
+let skipAll = false;
+addEventListener('keydown', e => { if (e.key.toLowerCase() === 's') skipAll = true; });
+
+function powerOnSequence(next){
+  spinGroup.scale.set(0.01,0.01,0.01);
+  const startZ = 6, endZ = 3.4;
+  camera.position.z = startZ;
+  tween(1800, k => {
+    const s = 0.01 + (1.0 - 0.01) * easeOutCubic(k);
+    spinGroup.scale.set(s, s, s);
+    hemi.intensity = 0.2 + 2.3 * k;
+    stars.userData.fadeMaterial.opacity = k;
+    camera.position.z = startZ + (endZ - startZ) * easeOutCubic(k);
+  }, next, easeOutCubic);
+}
+
+let autoSpin = 0.002;
+let spinEnabled = true;
+
+function animateToLatLon(lat, lon, zoom = 2.0, ms = 2200) {
+  spinEnabled = false;
+  
+  const startQ = spinGroup.quaternion.clone();
+  const targetQ = targetQuaternionForLatLon(lat, lon);
+  const startZ = camera.position.z;
+  
+  const t0 = performance.now();
+  function step(t){
+    const k = Math.min(1, (t - t0) / ms);
+    const e = easeInOutQuad(k);
+    spinGroup.quaternion.slerpQuaternions(startQ, targetQ, e);
+    camera.position.z = startZ + (zoom - startZ) * e;
+    
+    if (k >= 1) {
+      spinEnabled = true;
+      console.log(`Animation complete. Target: lat ${lat.toFixed(3)}, lon ${lon.toFixed(3)}`);
+      const center = getScreenCenterLatLon();
+      if (center) {
+        const error = gcAngleDeg(center, {lat, lon});
+        console.log(`Screen center: lat ${center.lat.toFixed(3)}, lon ${center.lon.toFixed(3)}, error: ${error.toFixed(2)}°`);
+      }
+    } else {
+      requestAnimationFrame(step);
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+function jumpToLatLon(lat, lon, zoom=2.0){
+  spinEnabled = false;
+  spinGroup.quaternion.copy(targetQuaternionForLatLon(lat, lon));
+  camera.position.z = zoom;
+  spinEnabled = true;
+  if (hintEl) hintEl.remove();
+}
+
+/* ===== Country by IP then fly ===== */
+powerOnSequence(goToCountryByIP);
+
+async function goToCountryByIP() {
+  const fallback = { lat: -27.059, lon: 132.938, name: 'Australia', area: 7692024 };
+  try {
+    const r1 = await fetch('https://ipapi.co/country/', { cache: 'no-store' });
+    const iso2 = r1.ok ? (await r1.text()).trim() : null;
+    if (!iso2) throw new Error('No country code');
+
+    const r2 = await fetch(`https://restcountries.com/v3.1/alpha/${iso2}`);
+    if (!r2.ok) throw new Error('Country lookup failed');
+
+    const c = (await r2.json())[0];
+    const centroid = Array.isArray(c?.latlng) ? { lat: c.latlng[0], lon: c.latlng[1] } : null;
+    const capital = Array.isArray(c?.capitalInfo?.latlng) ? { lat: c.capitalInfo.latlng[0], lon: c.capitalInfo.latlng[1] } : null;
+    const area = c?.area;
+    const name = c?.name?.common || iso2;
+    const big = area && area > 2_000_000;
+    const target = big ? (centroid ?? capital) : (capital ?? centroid) ?? fallback;
+
+    setDebugTarget(target.lat, target.lon, name);
+    const z = distanceForArea(area || fallback.area);
+    
+    console.log(`Targeting: ${name} at lat ${target.lat.toFixed(3)}, lon ${target.lon.toFixed(3)}`);
+    
+    skipAll ? jumpToLatLon(target.lat, target.lon, z) : animateToLatLon(target.lat, target.lon, z, 2000);
+    const hint = document.getElementById('hint');
+    if (hint) hint.textContent = `Zooming to ${name} ${big ? '(centroid)' : '(capital)'}`;
+  } catch (err) {
+    console.warn("Geolocation failed:", err);
+    setDebugTarget(fallback.lat, fallback.lon, fallback.name);
+    const z = distanceForArea(fallback.area);
+    skipAll ? jumpToLatLon(fallback.lat, fallback.lon, z) : animateToLatLon(fallback.lat, fallback.lon, z, 2000);
+    const hint = document.getElementById('hint');
+    if (hint) hint.textContent = 'Zooming to Australia (fallback)';
+  }
+}
+
+function distanceForArea(area) {
+  if (!area) return 2.2;
+  if (area <  25_000)  return 1.5;
+  if (area < 150_000)  return 1.7;
+  if (area < 700_000)  return 1.9;
+  if (area < 2_000_000) return 2.2;
+  if (area < 6_000_000) return 2.5;
+  return 2.9;
+}
+
+/* ===== Interaction and loop ===== */
+function handleRaycast(){
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObjects([globePickMesh], false)[0];
+  if (hit) {
+    if (hit.uv) uniforms.mouseUV.value.copy(hit.uv);
+    debugState.pointerLL = worldPointToLatLon(hit.point);
+  }
+}
+
+const clock = new THREE.Clock();
+function animate(){
+  const dt = clock.getDelta();
+  if (spinEnabled) spinGroup.rotation.y += dt * autoSpin;
+  handleRaycast();
+  updateHUD();
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+animate();
+
+/* Events */
+addEventListener('mousemove', (e)=>{
+  pointer.set((e.clientX/innerWidth)*2 - 1, -(e.clientY/innerHeight)*2 + 1);
+});
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+addEventListener('click', ()=>{
+  if (debugState.pointerLL) {
+    const { lat, lon } = debugState.pointerLL;
+    console.log(`Clicked: lat ${lat.toFixed(3)}, lon ${lon.toFixed(3)}`);
+  }
+});
 </script>
 </body>
 </html>
