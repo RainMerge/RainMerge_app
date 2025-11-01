@@ -3,68 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App Viewer - DEBUG</title>
+    <title>App Viewer</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { height: 100%; overflow: hidden; }
         iframe { 
             width: 100%; 
-            height: calc(100% - 50px); /* Leave space for timer display */
+            height: 100%;
             border: none; 
             display: block;
-        }
-        #timerBar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 50px;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: monospace;
-            font-size: 20px;
-            z-index: 9999;
-        }
-        #timerBar.warning {
-            background: rgba(255, 0, 0, 0.8);
         }
     </style>
 </head>
 <body>
-    <div id="timerBar">⏰ Idle timer: <span id="countdown">30.0</span>s | Move mouse to reset</div>
-    
     <!-- Guacamole embedded here -->
     <iframe id="appFrame" src="http://localhost:8080/guacamole/#/client/UHlRdDUgQXBwAGMAZGVmYXVsdA" allow="clipboard-read; clipboard-write"></iframe>
-
+    
     <script>
         console.log('🚀 App wrapper loading...');
+        
         window.addEventListener('pageshow', e => {
             if (e.persisted) window.location.reload();
         });
-        // ===== IDLE TIMER =====
-        const IDLE_TIMEOUT = 30000; // 30 seconds
+        
+        // ===== IDLE TIMER WITH QUICK EXIT DETECTION =====
         let idleTimer;
-
-       function resetTimer() {
-        clearTimeout(idleTimer);
-        idleTimer = setTimeout(() => {
-            console.log('⏰ 30 SECONDS IDLE - REDIRECTING TO SCREENSAVER');
+        let lastActivityTime = Date.now();
+        let hasDetectedInactivity = false;
+        
+        function goToIdle() {
+            console.log('🌙 Going to idle screensaver...');
             sessionStorage.setItem('returnUrl', window.location.href);
             window.location.href = 'idle_index.html';
-        }, IDLE_TIMEOUT);
-    }
-
-        resetTimer();
- // Activity events
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click', 'wheel'];
-    events.forEach(event => {
-        document.addEventListener(event, resetTimer, true);
-    });
-
-    console.log('✅ Idle timer started (30 seconds)');
+        }
+        
+        function resetIdleTimer() {
+            lastActivityTime = Date.now();
+            hasDetectedInactivity = false; // Reset flag on activity
+            
+            clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => {
+                console.log('⏰ 30 SECONDS IDLE - Going to screensaver');
+                goToIdle();
+            }, 30000); // 30 seconds
+        }
+        
+        // Track all activity
+        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click', 'wheel'];
+        events.forEach(event => {
+            document.addEventListener(event, resetIdleTimer, true);
+        });
+        
+        // Start initial timer
+        resetIdleTimer();
+        
+        // ===== DETECT PYQT EXIT (Quick Idle) =====
+        setInterval(() => {
+            const timeSinceActivity = Date.now() - lastActivityTime;
+            
+            // If no activity for 3 seconds and haven't triggered yet
+            if (timeSinceActivity > 3000 && !hasDetectedInactivity) {
+                console.log('⚠️ No activity for 3 seconds - PyQt likely exited');
+                console.log('🚀 Triggering QUICK IDLE mode');
+                hasDetectedInactivity = true;
+                
+                // Go to idle immediately
+                goToIdle();
+            }
+        }, 500); // Check every 500ms for quick response
+        
+        console.log('✅ Idle detection active');
+        console.log('   • Normal idle: 30 seconds');
+        console.log('   • Quick idle: 3 seconds of no activity (PyQt exit)');
     </script>
 </body>
 </html>
