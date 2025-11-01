@@ -73,12 +73,19 @@
             console.log('💤 Idle overlay shown - Guacamole still running!');
         }
         
-        function hideIdle() {
-            console.log('📱 Hiding idle screen - returning to app');
-            idleOverlay.classList.remove('active');
-            resetIdleTimer();
-            console.log('✅ App visible - Guacamole never reloaded!');
-        }
+function hideIdle() {
+    console.log('📱 Hiding idle screen - returning to app');
+    
+    // Tell PyQt to go to Page 0
+    fetch('http://localhost:8081/go_home').catch(() => {});
+    
+    // Small delay to let PyQt switch
+    setTimeout(() => {
+        idleOverlay.classList.remove('active');
+        resetIdleTimer();
+        console.log('✅ Page 0 shown!');
+    }, 150);
+}
         
         // Listen for clicks from idle iframe
         window.addEventListener('message', (e) => {
