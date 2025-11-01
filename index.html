@@ -510,34 +510,59 @@ addEventListener('click', ()=>{
 });
 
 /* Launch App button handler */
+/* Launch App button handler */
 document.getElementById('launchBtn').addEventListener('click', (e)=>{
-  e.stopPropagation(); // Prevent globe click handler
+  e.stopPropagation();
   console.log('Launch App clicked!');
   window.location.href = 'app_wrapper.html';
 });
 
-/* ===== Inactivity Timer (30 seconds) ===== */
+/* ===== Inactivity Timer ===== */
 let idleTimer;
-const IDLE_TIMEOUT = 30000; // 30 seconds
+let currentIdleTimeout = 30000; // Default 30 seconds
+let lastActivityTime = Date.now();
+let quickIdleMode = false;
 
 function resetIdleTimer() {
+  lastActivityTime = Date.now();
   clearTimeout(idleTimer);
+  
   idleTimer = setTimeout(() => {
-    console.log('Inactive for 30 seconds, switching to idle mode...');
+    console.log('Going to idle mode...');
     sessionStorage.setItem('returnUrl', window.location.href); 
     window.location.href = 'idle_index.html';
-  }, IDLE_TIMEOUT);
+  }, currentIdleTimeout);
 }
 
 // Reset timer on any user activity
 const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
 activityEvents.forEach(event => {
-  document.addEventListener(event, resetIdleTimer, true);
+  document.addEventListener(event, () => {
+    resetIdleTimer();
+    quickIdleMode = false; // Reset to normal mode on activity
+    currentIdleTimeout = 30000;
+  }, true);
 });
 
-// Start the timer when page loads
+// Start initial timer
 resetIdleTimer();
-console.log('Inactivity timer started (30 seconds)');
+
+/* ===== Detect inactivity in iframe (PyQt likely hidden) ===== */
+let noActivityCounter = 0;
+
+setInterval(() => {
+  const timeSinceActivity = Date.now() - lastActivityTime;
+  
+  // If no activity for 5 seconds, assume app exited
+  if (timeSinceActivity > 2000 && !quickIdleMode) {
+    console.log('⚠️ No activity detected - app may have exited');
+    quickIdleMode = true;
+    currentIdleTimeout = 1000; // Only wait 2 more seconds
+    resetIdleTimer(); // Restart timer with quick timeout
+  }
+}, 1000);
+
+console.log('✅ Idle detection started');
 
 </script>
 </body>
