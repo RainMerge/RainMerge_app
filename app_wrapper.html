@@ -3,10 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App Viewer</title>
+    <title>RainMerge App</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { height: 100%; overflow: hidden; }
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
+        
+        html, body { 
+            height: 100%; 
+            overflow: hidden; 
+        }
+        
         iframe { 
             width: 100%; 
             height: 100%;
@@ -17,58 +26,92 @@
 </head>
 <body>
     <!-- Guacamole embedded here -->
-    <iframe id="appFrame" src="http://localhost:8080/guacamole/#/client/UHlRdDUgQXBwAGMAZGVmYXVsdA" allow="clipboard-read; clipboard-write"></iframe>
+    <iframe 
+        id="appFrame" 
+        src="http://localhost:8080/guacamole/#/client/UHlRdDUgQXBwAGMAZGVmYXVsdA" 
+        allow="clipboard-read; clipboard-write">
+    </iframe>
     
     <script>
-        console.log('🚀 App wrapper loading...');
+        console.log('🚀 RainMerge App Wrapper loaded');
         
-        window.addEventListener('pageshow', e => {
-            if (e.persisted) window.location.reload();
+        // Reload on back-forward cache
+        window.addEventListener('pageshow', (e) => {
+            if (e.persisted) {
+                console.log('⚠️  Page from cache - reloading');
+                window.location.reload();
+            }
         });
         
-        // ===== IDLE TIMER WITH QUICK EXIT DETECTION =====
-let idleTimer;
-
-function goToIdle() {
-    console.log('🌙 Going to idle...');
-    sessionStorage.setItem('returnUrl', window.location.href);
-    window.location.href = 'idle_index.html';
-}
-
-function resetIdleTimer() {
-    clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => {
-        console.log('⏰ 30 seconds inactive - going to idle');
-        goToIdle();
-    }, 30000); // Normal 30-second idle
-}
-
-// Track user activity
-const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click', 'wheel'];
-events.forEach(event => {
-    document.addEventListener(event, resetIdleTimer, true);
-});
-
-resetIdleTimer();
-
-// Check for PyQt exit signal
-setInterval(async () => {
-    try {
-        const response = await fetch('/tmp/pyqt_exited.signal?' + Date.now());
-        if (response.ok) {
-            console.log('🚪 PyQt Exit detected - going to idle IMMEDIATELY!');
-            // Delete the signal
-            await fetch('/delete_signal');
-            goToIdle();
-        }
-    } catch (e) {
-        // Signal doesn't exist, app is still running
-    }
-}, 500); // Check every 500ms
+        // ===== IDLE TIMER =====
+        let idleTimer;
         
-        console.log('✅ Idle detection active');
-        console.log('   • Normal idle: 30 seconds');
-        console.log('   • Quick idle: 3 seconds of no activity (PyQt exit)');
+        function goToIdle(reason) {
+            console.log(`🌙 Going to idle screensaver: ${reason}`);
+            sessionStorage.setItem('returnUrl', window.location.href);
+            window.location.href = 'idle_index.html';
+        }
+        
+        function resetIdleTimer() {
+            clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => {
+                goToIdle('30 seconds of user inactivity');
+            }, 30000); // 30 seconds
+        }
+        
+        // Track user activity
+        const activityEvents = [
+            'mousedown', 
+            'mousemove', 
+            'keypress', 
+            'scroll', 
+            'touchstart', 
+            'click', 
+            'wheel'
+        ];
+        
+        activityEvents.forEach(event => {
+            document.addEventListener(event, resetIdleTimer, true);
+        });
+        
+        // Start idle timer
+        resetIdleTimer();
+        console.log('✅ Inactivity timer active (30 seconds)');
+        
+        // ===== EXIT DETECTION VIA HTTP =====
+        let exitCheckInterval = setInterval(async () => {
+            try {
+                const response = await fetch('http://localhost:8081/check_exit', {
+                    method: 'GET',
+                    cache: 'no-store'
+                });
+                
+                if (response.ok) {
+                    const text = await response.text();
+                    
+                    if (text === 'EXITED') {
+                        console.log('🚪 EXIT DETECTED from PyQt!');
+                        console.log('   → Going to screensaver immediately');
+                        
+                        // Stop checking
+                        clearInterval(exitCheckInterval);
+                        
+                        // Go to idle IMMEDIATELY
+                        goToIdle('PyQt Exit button clicked');
+                    }
+                }
+            } catch (error) {
+                // HTTP server not responding yet, that's ok
+                // This happens during initial load
+            }
+        }, 500); // Check every 500ms for quick response
+        
+        console.log('✅ Exit detection active (polling every 500ms)');
+        console.log('📡 Watching: http://localhost:8081/check_exit');
+        
+        console.log('\n🎯 TWO IDLE TRIGGERS:');
+        console.log('   1. Exit button in PyQt → Instant screensaver');
+        console.log('   2. 30s inactivity → Screensaver');
     </script>
 </body>
 </html>
