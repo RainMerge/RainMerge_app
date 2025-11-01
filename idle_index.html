@@ -221,9 +221,18 @@ addEventListener('resize', ()=>{
 
 /* ---------- Return to main app on any click ---------- */
 addEventListener('click', () => {
-  const returnUrl = sessionStorage.getItem('returnUrl') || 'index.html';
-  console.log('Waking up - returning to:', returnUrl);
-  window.location.href = returnUrl;
+  console.log('👆 Idle screen clicked');
+  
+  // If inside iframe (overlay mode), tell parent to hide
+  if (window.parent !== window) {
+    console.log('📤 Sending message to parent wrapper');
+    window.parent.postMessage('idle_clicked', '*');
+  } else {
+    // If standalone (old mode), navigate normally
+    const returnUrl = sessionStorage.getItem('returnUrl') || 'index.html';
+    console.log('Waking up - returning to:', returnUrl);
+    window.location.href = returnUrl;
+  }
 });
 </script>
 </body>
