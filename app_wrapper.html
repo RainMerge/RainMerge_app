@@ -17,7 +17,7 @@
   <!-- Guacamole stays loaded -->
   <iframe
     id="appFrame"
-    src="https://vanilla-cherry-health-manor.trycloudflare.com/guacamole/"
+    src="https://touched-valve-dispatch-gorgeous.trycloudflare.com/guacamole/"
     allow="clipboard-read; clipboard-write">
   </iframe>
 
@@ -39,7 +39,7 @@
     function hideIdle(){
       console.log('Hiding idle screen, return to app');
       // Tell PyQt to go to Page 0 via Nginx proxy to the kiosk container
-      fetch('https://vanilla-cherry-health-manor.trycloudflare.com/kiosk/go_home').catch(()=>{});
+      fetch('https://touched-valve-dispatch-gorgeous.trycloudflare.com/kiosk/go_home').catch(()=>{});
       setTimeout(()=>{
         idleOverlay.classList.remove('active');
         resetIdleTimer();
@@ -65,7 +65,7 @@
     // Exit detection, poll the kiosk HTTP endpoint through Cloudflare
     setInterval(async ()=>{
       try{
-        const res = await fetch('https://vanilla-cherry-health-manor.trycloudflare.com/kiosk/check_exit', {cache:'no-store'});
+        const res = await fetch('https://touched-valve-dispatch-gorgeous.trycloudflare.com/kiosk/check_exit', {cache:'no-store'});
         if(res.ok){
           const txt = await res.text();
           if(txt === 'EXITED'){
