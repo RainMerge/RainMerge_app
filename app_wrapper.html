@@ -1,159 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RainMerge App</title>
-    <style>
-        * { 
-            margin: 0; 
-            padding: 0; 
-            box-sizing: border-box; 
-        }
-        
-        html, body { 
-            height: 100%; 
-            overflow: hidden; 
-        }
-        
-        /* Guacamole frame - always visible */
-        #appFrame {
-            position: absolute;
-            width: 100%; 
-            height: 100%;
-            border: none; 
-            display: block;
-            z-index: 1;
-        }
-        
-        /* Idle overlay - shows on top when needed */
-        #idleOverlay {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            z-index: 10;
-            display: none; /* Hidden by default */
-        }
-        
-        #idleOverlay.active {
-            display: block;
-        }
-        
-        #idleFrame {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RainMerge App</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    html,body{height:100%;overflow:hidden}
+    #appFrame{position:absolute;width:100%;height:100%;border:none;display:block;z-index:1}
+    #idleOverlay{position:absolute;width:100%;height:100%;top:0;left:0;z-index:10;display:none}
+    #idleOverlay.active{display:block}
+    #idleFrame{width:100%;height:100%;border:none}
+  </style>
 </head>
 <body>
-    <!-- Guacamole - stays loaded! -->
-    <iframe 
-        id="appFrame" 
-        src="http://localhost/guacamole/"
-        allow="clipboard-read; clipboard-write">
-    </iframe>
-    
-    <!-- Idle screen overlay - your idle_index.html -->
-    <div id="idleOverlay">
-        <iframe id="idleFrame" src="idle_index.html"></iframe>
-    </div>
-    
-    <script>
-        console.log('🚀 RainMerge App Wrapper loaded');
-        
-        const idleOverlay = document.getElementById('idleOverlay');
-        
-        // ===== SHOW/HIDE IDLE SCREEN =====
-        function showIdle(reason) {
-            console.log(`🌙 Showing idle screen: ${reason}`);
-            idleOverlay.classList.add('active');
-            console.log('💤 Idle overlay shown - Guacamole still running!');
-        }
-        
-function hideIdle() {
-    console.log('📱 Hiding idle screen - returning to app');
-    
-    // Tell PyQt to go to Page 0
-    fetch('http://localhost:8081/go_home').catch(() => {});
-    
-    // Small delay to let PyQt switch
-    setTimeout(() => {
+  <!-- Guacamole stays loaded -->
+  <iframe
+    id="appFrame"
+    src="https://vanilla-cherry-health-manor.trycloudflare.com/guacamole/"
+    allow="clipboard-read; clipboard-write">
+  </iframe>
+
+  <!-- Idle overlay -->
+  <div id="idleOverlay">
+    <iframe id="idleFrame" src="idle_index.html"></iframe>
+  </div>
+
+  <script>
+    console.log('RainMerge App Wrapper loaded');
+
+    const idleOverlay = document.getElementById('idleOverlay');
+
+    function showIdle(reason){
+      console.log('Showing idle screen:', reason);
+      idleOverlay.classList.add('active');
+    }
+
+    function hideIdle(){
+      console.log('Hiding idle screen, return to app');
+      // Tell PyQt to go to Page 0 via Nginx proxy to the kiosk container
+      fetch('https://vanilla-cherry-health-manor.trycloudflare.com/kiosk/go_home').catch(()=>{});
+      setTimeout(()=>{
         idleOverlay.classList.remove('active');
         resetIdleTimer();
-        console.log('✅ Page 0 shown!');
-    }, 150);
-}
-        
-        // Listen for clicks from idle iframe
-        window.addEventListener('message', (e) => {
-            if (e.data === 'idle_clicked') {
-                console.log('👆 Click detected in idle screen');
-                hideIdle();
-            }
-        });
-        
-        // ===== IDLE TIMER =====
-        let idleTimer;
-        
-        function resetIdleTimer() {
-            clearTimeout(idleTimer);
-            idleTimer = setTimeout(() => {
-                showIdle('30 seconds of user inactivity');
-            }, 30000); // 30 seconds
+        console.log('Page 0 shown');
+      },150);
+    }
+
+    // Click coming from idle iframe
+    window.addEventListener('message',(e)=>{
+      if(e.data === 'idle_clicked') hideIdle();
+    });
+
+    // Idle timer
+    let idleTimer;
+    function resetIdleTimer(){
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(()=>showIdle('30 seconds of inactivity'), 30000);
+    }
+    ['mousedown','mousemove','keypress','scroll','touchstart','click','wheel']
+      .forEach(evt=>document.addEventListener(evt, resetIdleTimer, true));
+    resetIdleTimer();
+
+    // Exit detection, poll the kiosk HTTP endpoint through Cloudflare
+    setInterval(async ()=>{
+      try{
+        const res = await fetch('https://vanilla-cherry-health-manor.trycloudflare.com/kiosk/check_exit', {cache:'no-store'});
+        if(res.ok){
+          const txt = await res.text();
+          if(txt === 'EXITED'){
+            console.log('Exit detected from PyQt, show screensaver');
+            showIdle('PyQt Exit button clicked');
+          }
         }
-        
-        // Track user activity
-        const activityEvents = [
-            'mousedown', 
-            'mousemove', 
-            'keypress', 
-            'scroll', 
-            'touchstart', 
-            'click', 
-            'wheel'
-        ];
-        
-        activityEvents.forEach(event => {
-            document.addEventListener(event, resetIdleTimer, true);
-        });
-        
-        // Start idle timer
-        resetIdleTimer();
-        console.log('✅ Inactivity timer active (30 seconds)');
-        
-        // ===== EXIT DETECTION VIA HTTP =====
-        let exitCheckInterval = setInterval(async () => {
-            try {
-                const response = await fetch('http://localhost:8081/check_exit', {
-                    method: 'GET',
-                    cache: 'no-store'
-                });
-                
-                if (response.ok) {
-                    const text = await response.text();
-                    
-                    if (text === 'EXITED') {
-                        console.log('🚪 EXIT DETECTED from PyQt!');
-                        console.log('   → Going to screensaver immediately');
-                        
-                        showIdle('PyQt Exit button clicked');
-                    }
-                }
-            } catch (error) {
-                // HTTP server not responding yet, that's ok
-            }
-        }, 500); // Check every 500ms
-        
-        console.log('✅ Exit detection active (polling every 500ms)');
-        console.log('📡 Watching: http://localhost:8081/check_exit');
-        
-        console.log('\n🎯 TWO IDLE TRIGGERS:');
-        console.log('   1. Exit button in PyQt → Instant screensaver');
-        console.log('   2. 30s inactivity → Screensaver');
-        console.log('⚡ Overlay system - no reload delay!');
-    </script>
+      }catch(_){}
+    }, 500);
+  </script>
 </body>
 </html>
