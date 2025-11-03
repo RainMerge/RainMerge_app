@@ -14,31 +14,29 @@
   </style>
 </head>
 <body>
-  <!-- Guacamole stays loaded -->
-  <iframe
-    id="appFrame"
-    src="https://both-industry-cent-magnitude.trycloudflare.com/launch"
-    allow="clipboard-read; clipboard-write">
-  </iframe>
+  <!-- The RDP session frame -->
+  <iframe id="appFrame" allow="clipboard-read; clipboard-write"></iframe>
+
   <!-- Idle overlay -->
   <div id="idleOverlay">
     <iframe id="idleFrame" src="idle_index.html"></iframe>
   </div>
+
   <script>
-    // Get base URL dynamically
+    // Dynamically set correct base
     const BASE_URL = window.location.origin;
     document.getElementById('appFrame').src = `${BASE_URL}/launch`;
-    
+    console.log('RainMerge App Wrapper loaded - Base URL:', BASE_URL);
+
     const idleOverlay = document.getElementById('idleOverlay');
-    
+
     function showIdle(reason){
       console.log('Showing idle screen:', reason);
       idleOverlay.classList.add('active');
     }
-    
+
     function hideIdle(){
       console.log('Hiding idle screen, return to app');
-      // Tell PyQt to go to Page 0 via Nginx proxy to the kiosk container
       fetch(`${BASE_URL}/kiosk/go_home`).catch(()=>{});
       setTimeout(()=>{
         idleOverlay.classList.remove('active');
@@ -46,13 +44,11 @@
         console.log('Page 0 shown');
       },150);
     }
-    
-    // Click coming from idle iframe
+
     window.addEventListener('message',(e)=>{
       if(e.data === 'idle_clicked') hideIdle();
     });
-    
-    // Idle timer
+
     let idleTimer;
     function resetIdleTimer(){
       clearTimeout(idleTimer);
@@ -61,8 +57,8 @@
     ['mousedown','mousemove','keypress','scroll','touchstart','click','wheel']
       .forEach(evt=>document.addEventListener(evt, resetIdleTimer, true));
     resetIdleTimer();
-    
-    // Exit detection, poll the kiosk HTTP endpoint through Cloudflare
+
+    // Exit detection (optional)
     setInterval(async ()=>{
       try{
         const res = await fetch(`${BASE_URL}/kiosk/check_exit`, {cache:'no-store'});
