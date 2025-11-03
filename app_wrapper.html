@@ -23,8 +23,8 @@
   </div>
 
   <script>
-    // Dynamically set correct base
-    const BASE_URL = window.location.origin;
+    // Use your active Cloudflare tunnel instead of GitHub Pages origin
+    const BASE_URL = "https://both-industry-cent-magnitude.trycloudflare.com";
     document.getElementById('appFrame').src = `${BASE_URL}/launch`;
     console.log('RainMerge App Wrapper loaded - Base URL:', BASE_URL);
 
