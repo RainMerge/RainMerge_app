@@ -20,38 +20,38 @@
     src="https://touched-valve-dispatch-gorgeous.trycloudflare.com/guacamole/"
     allow="clipboard-read; clipboard-write">
   </iframe>
-
   <!-- Idle overlay -->
   <div id="idleOverlay">
     <iframe id="idleFrame" src="idle_index.html"></iframe>
   </div>
-
   <script>
-    console.log('RainMerge App Wrapper loaded');
-
+    // Get base URL dynamically
+    const BASE_URL = window.location.origin;
+    console.log('RainMerge App Wrapper loaded - Base URL:', BASE_URL);
+    
     const idleOverlay = document.getElementById('idleOverlay');
-
+    
     function showIdle(reason){
       console.log('Showing idle screen:', reason);
       idleOverlay.classList.add('active');
     }
-
+    
     function hideIdle(){
       console.log('Hiding idle screen, return to app');
       // Tell PyQt to go to Page 0 via Nginx proxy to the kiosk container
-      fetch('https://touched-valve-dispatch-gorgeous.trycloudflare.com/kiosk/go_home').catch(()=>{});
+      fetch(`${BASE_URL}/kiosk/go_home`).catch(()=>{});
       setTimeout(()=>{
         idleOverlay.classList.remove('active');
         resetIdleTimer();
         console.log('Page 0 shown');
       },150);
     }
-
+    
     // Click coming from idle iframe
     window.addEventListener('message',(e)=>{
       if(e.data === 'idle_clicked') hideIdle();
     });
-
+    
     // Idle timer
     let idleTimer;
     function resetIdleTimer(){
@@ -61,11 +61,11 @@
     ['mousedown','mousemove','keypress','scroll','touchstart','click','wheel']
       .forEach(evt=>document.addEventListener(evt, resetIdleTimer, true));
     resetIdleTimer();
-
+    
     // Exit detection, poll the kiosk HTTP endpoint through Cloudflare
     setInterval(async ()=>{
       try{
-        const res = await fetch('https://touched-valve-dispatch-gorgeous.trycloudflare.com/kiosk/check_exit', {cache:'no-store'});
+        const res = await fetch(`${BASE_URL}/kiosk/check_exit`, {cache:'no-store'});
         if(res.ok){
           const txt = await res.text();
           if(txt === 'EXITED'){
