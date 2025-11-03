@@ -1,4 +1,4 @@
-cross cehck <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -7,51 +7,48 @@ cross cehck <!DOCTYPE html>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     html,body{height:100%;overflow:hidden}
-    #appFrame{position:absolute;width:100%;height:100%;border:none;display:block;z-index:1}
+    #appFrame{position:absolute;width:100%;height:100%;border:none;z-index:1}
     #idleOverlay{position:absolute;width:100%;height:100%;top:0;left:0;z-index:10;display:none}
     #idleOverlay.active{display:block}
     #idleFrame{width:100%;height:100%;border:none}
   </style>
 </head>
 <body>
-  <!-- Guacamole stays loaded -->
-  <iframe
-    id="appFrame"
-    src="https://both-industry-cent-magnitude.trycloudflare.com/launch"
-    allow="clipboard-read; clipboard-write">
-  </iframe>
+  <!-- Guacamole session -->
+  <iframe id="appFrame" allow="clipboard-read; clipboard-write"></iframe>
+
   <!-- Idle overlay -->
   <div id="idleOverlay">
     <iframe id="idleFrame" src="idle_index.html"></iframe>
   </div>
+
   <script>
-    // Get base URL dynamically
-    const BASE_URL = window.location.origin;
-    document.getElementById('appFrame').src = `${BASE_URL}/launch`;
-    
+    // Fixed backend base (Cloudflare tunnel)
+    const BASE_URL = "https://both-industry-cent-magnitude.trycloudflare.com";
+    const appFrame = document.getElementById('appFrame');
+    appFrame.src = `${BASE_URL}/launch`;   // ✅ always correct
+
     const idleOverlay = document.getElementById('idleOverlay');
-    
+
     function showIdle(reason){
       console.log('Showing idle screen:', reason);
       idleOverlay.classList.add('active');
     }
-    
+
     function hideIdle(){
       console.log('Hiding idle screen, return to app');
-      // Tell PyQt to go to Page 0 via Nginx proxy to the kiosk container
-      fetch(`${BASE_URL}/kiosk/go_home`).catch(()=>{});
+      fetch(`${BASE_URL}/kiosk/go_home`, {mode:'no-cors'}).catch(()=>{});
       setTimeout(()=>{
         idleOverlay.classList.remove('active');
         resetIdleTimer();
-        console.log('Page 0 shown');
       },150);
     }
-    
-    // Click coming from idle iframe
-    window.addEventListener('message',(e)=>{
+
+    // Click from idle iframe
+    window.addEventListener('message',e=>{
       if(e.data === 'idle_clicked') hideIdle();
     });
-    
+
     // Idle timer
     let idleTimer;
     function resetIdleTimer(){
@@ -61,20 +58,17 @@ cross cehck <!DOCTYPE html>
     ['mousedown','mousemove','keypress','scroll','touchstart','click','wheel']
       .forEach(evt=>document.addEventListener(evt, resetIdleTimer, true));
     resetIdleTimer();
-    
-    // Exit detection, poll the kiosk HTTP endpoint through Cloudflare
+
+    // Optional exit check
     setInterval(async ()=>{
       try{
-        const res = await fetch(`${BASE_URL}/kiosk/check_exit`, {cache:'no-store'});
-        if(res.ok){
+        const res = await fetch(`${BASE_URL}/kiosk/check_exit`, {cache:'no-store',mode:'no-cors'});
+        if(res && res.ok){
           const txt = await res.text();
-          if(txt === 'EXITED'){
-            console.log('Exit detected from PyQt, show screensaver');
-            showIdle('PyQt Exit button clicked');
-          }
+          if(txt.trim()==='EXITED') showIdle('PyQt Exit button clicked');
         }
       }catch(_){}
-    }, 500);
+    }, 1000);
   </script>
 </body>
 </html>
