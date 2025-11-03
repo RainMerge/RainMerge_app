@@ -17,7 +17,7 @@
   <!-- Guacamole stays loaded -->
   <iframe
     id="appFrame"
-    src="https://both-industry-cent-magnitude.trycloudflare.com/guacamole/"
+    src="https://both-industry-cent-magnitude.trycloudflare.com/launch"
     allow="clipboard-read; clipboard-write">
   </iframe>
   <!-- Idle overlay -->
@@ -27,7 +27,7 @@
   <script>
     // Get base URL dynamically
     const BASE_URL = window.location.origin;
-    console.log('RainMerge App Wrapper loaded - Base URL:', BASE_URL);
+    document.getElementById('appFrame').src = `${BASE_URL}/launch`;
     
     const idleOverlay = document.getElementById('idleOverlay');
     
