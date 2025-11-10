@@ -4,36 +4,41 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>RainMerge App</title>
-<style>
-  * {margin:0; padding:0; box-sizing:border-box}
-  html, body {height:100%; overflow:hidden}
-  #appFrame {position:absolute; width:100%; height:100%; border:none; z-index:1}
-  #idleOverlay {
-    position:absolute;
-    width:100%;
-    height:100%;
-    top:0; left:0;
-    z-index:10;
-    display:none;
-    pointer-events:none;    /* 🧠 block clicks when hidden */
-  }
-  #idleOverlay.active {
-    display:block;
-    pointer-events:auto;    /* 🖱️ allow clicks only when visible */
-  }
-  #idleFrame {width:100%; height:100%; border:none}
-</style>
-
+  <style>
+    * {margin:0; padding:0; box-sizing:border-box}
+    html, body {height:100%; overflow:hidden}
+    #appFrame {
+      position:absolute;
+      width:100%;
+      height:100%;
+      border:none;
+      z-index:1;
+    }
+    /* 🧠 Prevent hidden overlay from blocking clicks */
+    #idleOverlay {
+      position:absolute;
+      width:100%;
+      height:100%;
+      top:0;
+      left:0;
+      z-index:10;
+      display:none;
+      pointer-events:none;
+    }
+    #idleOverlay.active {
+      display:block;
+      pointer-events:auto;
+    }
+    #idleFrame {width:100%; height:100%; border:none}
+  </style>
 </head>
 <body>
-  <!-- Guacamole session -->
+  <!-- Guacamole session (main kiosk) -->
   <iframe
-  id="appFrame"
-  src=""
-  allow="clipboard-read; clipboard-write; fullscreen; autoplay"
-  sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-pointer-lock allow-modals"
-></iframe>
-
+    id="appFrame"
+    allow="clipboard-read; clipboard-write; fullscreen; autoplay"
+    sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-pointer-lock allow-modals">
+  </iframe>
 
   <!-- Idle overlay -->
   <div id="idleOverlay">
@@ -41,10 +46,9 @@
   </div>
 
   <script>
-    // Fixed backend base (Cloudflare tunnel)
     const BASE_URL = "https://kiosk.sessionmanager.site";
     const appFrame = document.getElementById('appFrame');
-    appFrame.src = `${BASE_URL}`;   // ✅ always correct
+    appFrame.src = `${BASE_URL}`; // direct entry, no /launch
 
     const idleOverlay = document.getElementById('idleOverlay');
 
@@ -58,34 +62,35 @@
       fetch(`${BASE_URL}/kiosk/go_home`, {mode:'no-cors'}).catch(()=>{});
       setTimeout(()=>{
         idleOverlay.classList.remove('active');
+        idleOverlay.style.pointerEvents = 'none'; // 🧩 ensure clicks pass through again
         resetIdleTimer();
       },150);
     }
 
     // Click from idle iframe
-    window.addEventListener('message',e=>{
-      if(e.data === 'idle_clicked') hideIdle();
+    window.addEventListener('message', e => {
+      if (e.data === 'idle_clicked') hideIdle();
     });
 
-    // Idle timer
+    // Idle timer logic
     let idleTimer;
     function resetIdleTimer(){
       clearTimeout(idleTimer);
-      idleTimer = setTimeout(()=>showIdle('30 seconds of inactivity'), 30000);
+      idleTimer = setTimeout(() => showIdle('30 seconds of inactivity'), 30000);
     }
     ['mousedown','mousemove','keypress','scroll','touchstart','click','wheel']
-      .forEach(evt=>document.addEventListener(evt, resetIdleTimer, true));
+      .forEach(evt => document.addEventListener(evt, resetIdleTimer, true));
     resetIdleTimer();
 
     // Optional exit check
-    setInterval(async ()=>{
-      try{
+    setInterval(async () => {
+      try {
         const res = await fetch(`${BASE_URL}/kiosk/check_exit`, {cache:'no-store',mode:'no-cors'});
-        if(res && res.ok){
+        if (res && res.ok) {
           const txt = await res.text();
-          if(txt.trim()==='EXITED') showIdle('PyQt Exit button clicked');
+          if (txt.trim() === 'EXITED') showIdle('PyQt Exit button clicked');
         }
-      }catch(_){}
+      } catch(_) {}
     }, 1000);
   </script>
 </body>
