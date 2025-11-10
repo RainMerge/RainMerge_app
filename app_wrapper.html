@@ -4,14 +4,26 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>RainMerge App</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    html,body{height:100%;overflow:hidden}
-    #appFrame{position:absolute;width:100%;height:100%;border:none;z-index:1}
-    #idleOverlay{position:absolute;width:100%;height:100%;top:0;left:0;z-index:10;display:none}
-    #idleOverlay.active{display:block}
-    #idleFrame{width:100%;height:100%;border:none}
-  </style>
+<style>
+  * {margin:0; padding:0; box-sizing:border-box}
+  html, body {height:100%; overflow:hidden}
+  #appFrame {position:absolute; width:100%; height:100%; border:none; z-index:1}
+  #idleOverlay {
+    position:absolute;
+    width:100%;
+    height:100%;
+    top:0; left:0;
+    z-index:10;
+    display:none;
+    pointer-events:none;    /* 🧠 block clicks when hidden */
+  }
+  #idleOverlay.active {
+    display:block;
+    pointer-events:auto;    /* 🖱️ allow clicks only when visible */
+  }
+  #idleFrame {width:100%; height:100%; border:none}
+</style>
+
 </head>
 <body>
   <!-- Guacamole session -->
