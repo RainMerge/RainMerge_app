@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>RainMerge - Loading</title>
+  <title>RainMerge App</title>
   <style>
     * {
       margin: 0;
@@ -36,7 +36,6 @@
       pointer-events: none;
     }
     
-    /* Logo circle */
     .logo-circle {
       width: 120px;
       height: 120px;
@@ -57,7 +56,6 @@
       letter-spacing: -0.5px;
     }
     
-    /* Loading text */
     .loading-text {
       color: white;
       font-size: 20px;
@@ -65,7 +63,6 @@
       margin-bottom: 16px;
     }
     
-    /* Spinner */
     .spinner {
       width: 40px;
       height: 40px;
@@ -76,33 +73,21 @@
     }
     
     @keyframes pulse {
-      0%, 100% {
-        transform: scale(1);
-      }
-      50% {
-        transform: scale(1.05);
-      }
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
     }
     
     @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
+      to { transform: rotate(360deg); }
     }
     
-    /* App frame (hidden initially) */
+    /* App frame */
     #appFrame {
       position: absolute;
       width: 100%;
       height: 100%;
       border: none;
       z-index: 1;
-      opacity: 0;
-      transition: opacity 0.5s ease;
-    }
-    
-    #appFrame.visible {
-      opacity: 1;
     }
     
     /* Idle overlay */
@@ -128,7 +113,7 @@
   </style>
 </head>
 <body>
-  <!-- Loading screen -->
+  <!-- Loading screen (shows first) -->
   <div id="loadingScreen">
     <div class="logo-circle">
       <div class="logo-text">RM</div>
@@ -140,7 +125,7 @@
   <!-- Guacamole session -->
   <iframe id="appFrame" allow="clipboard-read; clipboard-write"></iframe>
   
-  <!-- Idle overlay -->
+  <!-- Idle overlay (rotating globe) -->
   <div id="idleOverlay">
     <iframe id="idleFrame" src="idle_index.html"></iframe>
   </div>
@@ -151,59 +136,39 @@
     const loadingScreen = document.getElementById('loadingScreen');
     const idleOverlay = document.getElementById('idleOverlay');
 
-    // Start loading the session
-    console.log('Starting session launch...');
+    // Start loading session
+    console.log('🚀 Starting session launch...');
     appFrame.src = `${BASE_URL}/launch`;
 
-    // Method 1: Hide loading when iframe loads
+    // Hide loading screen when iframe loads
+    let sessionReady = false;
     appFrame.addEventListener('load', () => {
-      console.log('Iframe loaded, hiding loading screen...');
-      setTimeout(() => {
-        loadingScreen.classList.add('hidden');
-        appFrame.classList.add('visible');
-      }, 800); // Small delay for smooth transition
+      if (!sessionReady) {
+        sessionReady = true;
+        console.log('✅ Session ready, hiding loading screen');
+        setTimeout(() => {
+          loadingScreen.classList.add('hidden');
+        }, 1000);
+      }
     });
 
-    // Method 2: Poll for session readiness (backup)
-    let pollAttempts = 0;
-    const maxPollAttempts = 30; // 30 seconds max
-    
-    const pollSession = setInterval(() => {
-      pollAttempts++;
-      
-      // Check if iframe has content
-      try {
-        if (appFrame.contentWindow && appFrame.contentWindow.location.href !== 'about:blank') {
-          console.log('Session ready via polling');
-          clearInterval(pollSession);
-          loadingScreen.classList.add('hidden');
-          appFrame.classList.add('visible');
-        }
-      } catch (e) {
-        // Cross-origin, which means it loaded
-        console.log('Session ready (cross-origin detected)');
-        clearInterval(pollSession);
+    // Backup: Hide after 10 seconds max
+    setTimeout(() => {
+      if (!sessionReady) {
+        console.log('⏱️ Timeout reached, hiding loading screen');
         loadingScreen.classList.add('hidden');
-        appFrame.classList.add('visible');
+        sessionReady = true;
       }
-      
-      // Timeout after 30 seconds
-      if (pollAttempts >= maxPollAttempts) {
-        console.log('Session timeout, hiding loading anyway');
-        clearInterval(pollSession);
-        loadingScreen.classList.add('hidden');
-        appFrame.classList.add('visible');
-      }
-    }, 1000);
+    }, 10000);
 
     // Idle screen functions
     function showIdle(reason) {
-      console.log('Showing idle screen:', reason);
+      console.log('💤 Showing idle screen:', reason);
       idleOverlay.classList.add('active');
     }
 
     function hideIdle() {
-      console.log('Hiding idle screen, return to app');
+      console.log('👆 Hiding idle screen, return to app');
       fetch(`${BASE_URL}/kiosk/go_home`, {mode: 'no-cors'}).catch(() => {});
       setTimeout(() => {
         idleOverlay.classList.remove('active');
