@@ -15,7 +15,13 @@
 </head>
 <body>
   <!-- Guacamole session -->
-  <iframe id="appFrame" allow="clipboard-read; clipboard-write"></iframe>
+  <iframe
+  id="appFrame"
+  src=""
+  allow="clipboard-read; clipboard-write; fullscreen; autoplay"
+  sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-pointer-lock allow-modals"
+></iframe>
+
 
   <!-- Idle overlay -->
   <div id="idleOverlay">
