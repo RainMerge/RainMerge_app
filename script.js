@@ -1,3 +1,33 @@
+//-----------------------------------------
+//  DRAGGABLE SPLIT VIEW (MAP + CHART)
+//-----------------------------------------
+
+const mapDiv = document.getElementById("map");
+const divider = document.getElementById("divider");
+const chartDiv = document.getElementById("chart-container");
+
+let dragging = false;
+
+divider.addEventListener("mousedown", () => dragging = true);
+document.addEventListener("mouseup", () => dragging = false);
+
+document.addEventListener("mousemove", function (e) {
+    if (!dragging) return;
+
+    const newMapHeight = e.clientY;
+
+    // prevent collapsing
+    if (newMapHeight < 100) return;
+    if (newMapHeight > window.innerHeight - 200) return;
+
+    mapDiv.style.height = newMapHeight + "px";
+    chartDiv.style.height = (window.innerHeight - newMapHeight - 8 - 40) + "px"; 
+});
+
+//-----------------------------------------
+//     YOUR ORIGINAL MAP + CHART CODE
+//-----------------------------------------
+
 // 1. Initialize Leaflet map
 const map = L.map('map').setView([27.7, 85.3], 6); // Nepal region
 
@@ -9,18 +39,13 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let marker = null;
 let chart = null;
 
-// 2. When user clicks on map, fetch temperature series
 map.on('click', async function (e) {
-    // place marker
-    if (marker) {
-        map.removeLayer(marker);
-    }
+    if (marker) map.removeLayer(marker);
     marker = L.marker(e.latlng).addTo(map);
 
     const lat = e.latlng.lat.toFixed(4);
     const lon = e.latlng.lng.toFixed(4);
 
-    // Build Open-Meteo API url
     const apiUrl =
         'https://archive-api.open-meteo.com/v1/archive'
         + `?latitude=${lat}`
@@ -35,19 +60,16 @@ map.on('click', async function (e) {
         const data = await response.json();
 
         if (!data.hourly) {
-            alert('No temperature data available for this location.');
+            alert('No data found for this location.');
             return;
         }
 
         const times = data.hourly.time;
         const temps = data.hourly.temperature_2m;
 
-        // 3. Plot with Chart.js
         const ctx = document.getElementById('tempChart').getContext('2d');
 
-        if (chart) {
-            chart.destroy();
-        }
+        if (chart) chart.destroy();
 
         chart = new Chart(ctx, {
             type: 'line',
@@ -63,22 +85,15 @@ map.on('click', async function (e) {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 scales: {
-                    x: {
-                        ticks: { maxTicksLimit: 10 }
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'Temperature (°C)'
-                        }
-                    }
+                    y: { title: { display: true, text: '°C' } }
                 }
             }
         });
 
-    } catch (err) {
-        console.error(err);
-        alert('Error fetching data from Open-Meteo.');
+    } catch (error) {
+        console.error(error);
+        alert("Error fetching temperature data");
     }
 });
