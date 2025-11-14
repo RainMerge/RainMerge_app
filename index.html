@@ -1,220 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>RainMerge App</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    html, body {
-      height: 100%;
-      overflow: hidden;
-      font-family: 'Roboto', 'Segoe UI', Arial, sans-serif;
-    }
-    
-    /* Loading screen */
-    #loadingScreen {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(135deg, #01579B 0%, #0288D1 100%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      transition: opacity 0.8s ease;
-    }
-    
-    #loadingScreen.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-    
-    .logo-circle {
-      width: 120px;
-      height: 120px;
-      background: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-      margin-bottom: 32px;
-      animation: pulse 2s ease-in-out infinite;
-    }
-    
-    .logo-text {
-      font-size: 28px;
-      font-weight: 700;
-      color: #01579B;
-      letter-spacing: -0.5px;
-    }
-    
-    .loading-text {
-      color: white;
-      font-size: 20px;
-      font-weight: 500;
-      margin-bottom: 16px;
-    }
-    
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid rgba(255, 255, 255, 0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-    
-    /* Powered by UNSW */
-    .powered-by {
-      position: absolute;
-      bottom: 24px;
-      right: 32px;
-      color: rgba(255, 255, 255, 0.8);
-      font-size: 13px;
-      font-weight: 500;
-      letter-spacing: 0.3px;
-    }
-    
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-    }
-    
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    
-    /* App frame */
-    #appFrame {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      border: none;
-      z-index: 1;
-    }
-    
-    /* Idle overlay */
-    #idleOverlay {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      top: 0;
-      left: 0;
-      z-index: 10;
-      display: none;
-    }
-    
-    #idleOverlay.active {
-      display: block;
-    }
-    
-    #idleFrame {
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Temperature Time-Series Viewer</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Loading screen (shows first) -->
-  <div id="loadingScreen">
-    <div class="logo-circle">
-      <div class="logo-text">RM</div>
+
+    <h1>Temperature Time-Series Viewer (ERA5-based)</h1>
+
+    <div id="map"></div>
+
+    <div id="chart-container">
+        <canvas id="tempChart"></canvas>
     </div>
-    <div class="loading-text">Loading RainMerge...</div>
-    <div class="spinner"></div>
-    <div class="powered-by">Powered by UNSW</div>
-  </div>
 
-  <!-- Guacamole session -->
-  <iframe id="appFrame" allow="clipboard-read; clipboard-write"></iframe>
-  
-  <!-- Idle overlay (rotating globe) -->
-  <div id="idleOverlay">
-    <iframe id="idleFrame" src="idle_index.html"></iframe>
-  </div>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-  <script>
-    const BASE_URL = "https://kiosk.sessionmanager.site";
-    const appFrame = document.getElementById('appFrame');
-    const loadingScreen = document.getElementById('loadingScreen');
-    const idleOverlay = document.getElementById('idleOverlay');
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    // Start loading session
-    console.log('🚀 Starting session launch...');
-    appFrame.src = `${BASE_URL}/launch`;
+    <!-- Custom JS -->
+    <script src="script.js"></script>
 
-    // Hide loading screen when iframe loads
-    let sessionReady = false;
-    appFrame.addEventListener('load', () => {
-      if (!sessionReady) {
-        sessionReady = true;
-        console.log('✅ Session ready, hiding loading screen');
-        setTimeout(() => {
-          loadingScreen.classList.add('hidden');
-        }, 1000);
-      }
-    });
-
-    // Backup: Hide after 10 seconds max
-    setTimeout(() => {
-      if (!sessionReady) {
-        console.log('⏱️ Timeout reached, hiding loading screen');
-        loadingScreen.classList.add('hidden');
-        sessionReady = true;
-      }
-    }, 10000);
-
-    // Idle screen functions
-    function showIdle(reason) {
-      console.log('💤 Showing idle screen:', reason);
-      idleOverlay.classList.add('active');
-    }
-
-    function hideIdle() {
-      console.log('👆 Hiding idle screen, return to app');
-      fetch(`${BASE_URL}/kiosk/go_home`, {mode: 'no-cors'}).catch(() => {});
-      setTimeout(() => {
-        idleOverlay.classList.remove('active');
-        resetIdleTimer();
-      }, 150);
-    }
-
-    // Handle messages from idle iframe
-    window.addEventListener('message', e => {
-      if (e.data === 'idle_clicked') hideIdle();
-    });
-
-    // Idle timer (30 seconds)
-    let idleTimer;
-    function resetIdleTimer() {
-      clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => showIdle('30 seconds of inactivity'), 30000);
-    }
-
-    ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click', 'wheel']
-      .forEach(evt => document.addEventListener(evt, resetIdleTimer, true));
-    
-    resetIdleTimer();
-
-    // Exit check
-    setInterval(async () => {
-      try {
-        const res = await fetch(`${BASE_URL}/kiosk/check_exit`, {cache: 'no-store'});
-        if (res && res.ok) {
-          const txt = await res.text();
-          if (txt.trim() === 'EXITED') showIdle('PyQt Exit button clicked');
-        }
-      } catch (_) {}
-    }, 1000);
-  </script>
 </body>
 </html>
